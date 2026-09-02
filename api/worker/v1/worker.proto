@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package worker.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/sauercrowd/worker/gen/worker/v1;workerv1";
+
+message DocumentSummary {
+  string id = 1;
+  string name = 2;
+  string filename = 3;
+}
+
+message Task {
+  string id = 1;
+  string name = 2;
+  repeated DocumentSummary documents = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+message Document {
+  string id = 1;
+  string task_id = 2;
+  string name = 3;
+  string filename = 4;
+  string content = 5;
+  string revision = 6;
+}
+
+message ListTasksResponse {
+  repeated Task tasks = 1;
+}
+
+message CreateTaskRequest {
+  string name = 1;
+}
+
+message TaskRequest {
+  string task_id = 1;
+}
+
+message RenameTaskRequest {
+  string task_id = 1;
+  string name = 2;
+}
+
+message CreateDocumentRequest {
+  string task_id = 1;
+  string name = 2;
+}
+
+message DocumentRequest {
+  string task_id = 1;
+  string document_id = 2;
+}
+
+message RenameDocumentRequest {
+  string task_id = 1;
+  string document_id = 2;
+  string name = 3;
+}
+
+message UpdateDocumentRequest {
+  string task_id = 1;
+  string document_id = 2;
+  string content = 3;
+  string revision = 4;
+}
+
+service WorkspaceService {
+  rpc ListTasks(google.protobuf.Empty) returns (ListTasksResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc CreateTask(CreateTaskRequest) returns (Task) {}
+  rpc RenameTask(RenameTaskRequest) returns (Task) {}
+  rpc DeleteTask(TaskRequest) returns (google.protobuf.Empty) {}
+  rpc CreateDocument(CreateDocumentRequest) returns (Document) {}
+  rpc GetDocument(DocumentRequest) returns (Document) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc RenameDocument(RenameDocumentRequest) returns (Document) {}
+  rpc UpdateDocument(UpdateDocumentRequest) returns (Document) {}
+  rpc DeleteDocument(DocumentRequest) returns (google.protobuf.Empty) {}
+}
