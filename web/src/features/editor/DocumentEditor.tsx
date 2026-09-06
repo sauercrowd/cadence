@@ -238,8 +238,7 @@ function EditorSurface({
     [draft, setDraft] = useState<Thread | null>(null),
     [markers, setMarkers] = useState<
       { id: string; top: number; detached: boolean }[]
-    >([]),
-    [showResolved, setShowResolved] = useState(false);
+    >([]);
   const root = useRef<HTMLDivElement>(null),
     selection = useRef<RangeSelection | null>(null),
     body = useRef(initial.body),
@@ -261,17 +260,12 @@ function EditorSurface({
     editor.getEditorState().read(() => {
       let previous = -30;
       setMarkers(
-        data.current
-          .filter((t) => showResolved || t.status === "open")
-          .map((t) => {
-            const rect = anchorRect(t.id, (key) => editor.getElementByKey(key));
-            const top = Math.max(
-              previous + 28,
-              rect ? rect.top - bounds.top : 8,
-            );
-            previous = top;
-            return { id: t.id, top, detached: !rect };
-          }),
+        data.current.map((t) => {
+          const rect = anchorRect(t.id, (key) => editor.getElementByKey(key));
+          const top = Math.max(previous + 28, rect ? rect.top - bounds.top : 8);
+          previous = top;
+          return { id: t.id, top, detached: !rect };
+        }),
       );
     });
   }
@@ -328,7 +322,7 @@ function EditorSurface({
       observer.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [threads, showResolved]);
+  }, [threads]);
 
   const beginComment = () =>
     editor.getEditorState().read(() => {
@@ -563,16 +557,6 @@ function EditorSurface({
           )}
         </div>
       </div>
-      {!!threads.length && (
-        <button
-          className="text-button resolved-toggle"
-          onClick={() => setShowResolved(!showResolved)}
-        >
-          {showResolved
-            ? "Hide resolved threads"
-            : `Show all ${threads.length} threads`}
-        </button>
-      )}
     </>
   );
 }

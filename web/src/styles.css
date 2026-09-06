@@ -1391,10 +1391,6 @@ pre {
 .thread-overlay textarea:focus {
   border-color: var(--structure);
 }
-.resolved-toggle {
-  margin-top: var(--s4);
-  font-size: var(--fs-ui);
-}
 
 /* ==========================================================================
    Dialogs, notices, states

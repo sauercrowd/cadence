@@ -68,10 +68,13 @@ test("tasks, comments, phase switching, and archiving", async ({
   await dot.click();
   const thread = page.getByRole("dialog", { name: "Comment thread" });
   await expect(thread).toBeVisible();
+  // Resolved threads stay on the page and can be reopened in place.
   await thread.getByRole("button", { name: "Resolve thread" }).click();
-  await expect(dot).toBeHidden();
-  await page.getByRole("button", { name: /Show all \d+ threads/ }).click();
+  await expect(
+    thread.getByRole("button", { name: "Reopen thread" }),
+  ).toBeVisible();
   await expect(dot).toBeVisible();
+  await expect(dot).toHaveClass(/resolved/);
 
   // Move to implementation planning and make it the current phase by
   // hovering/clicking its timeline number, which swaps to a clock icon.
