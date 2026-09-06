@@ -88,20 +88,6 @@ func (h *Handler) UpdateTask(_ context.Context, r *connect.Request[v1.UpdateTask
 	}
 	return connect.NewResponse(taskToProto(t)), nil
 }
-func (h *Handler) ArchiveTask(_ context.Context, r *connect.Request[v1.RevisionTaskRequest]) (*connect.Response[v1.Task], error) {
-	t, e := h.store.UpdateTask(r.Msg.Id, r.Msg.Revision, workspace.TaskUpdate{Status: "archived", Fields: []string{"status"}})
-	if e != nil {
-		return nil, rpcError(e)
-	}
-	return connect.NewResponse(taskToProto(t)), nil
-}
-func (h *Handler) RestoreTask(_ context.Context, r *connect.Request[v1.RevisionTaskRequest]) (*connect.Response[v1.Task], error) {
-	t, e := h.store.RestoreTask(r.Msg.Id, r.Msg.Revision)
-	if e != nil {
-		return nil, rpcError(e)
-	}
-	return connect.NewResponse(taskToProto(t)), nil
-}
 func (h *Handler) GetWorkflow(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.Workflow], error) {
 	w, e := h.store.GetWorkflow()
 	if e != nil {

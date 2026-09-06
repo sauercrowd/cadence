@@ -106,8 +106,6 @@ export const api = {
         },
       }),
     ),
-  restore: async (t: Task) =>
-    task(await workspaceClient.restoreTask({ id: t.id, revision: t.revision })),
   document: (taskId: string, documentId: string) =>
     workspaceClient.getDocument({ taskId, documentId }),
   saveDocument: (

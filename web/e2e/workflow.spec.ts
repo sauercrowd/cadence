@@ -47,7 +47,7 @@ async function selectText(page: Page, text: string) {
   await page.getByRole("button", { name: "Add comment", exact: true }).click();
 }
 
-test("tasks, comments, phase switching, and archive restore", async ({
+test("tasks, comments, phase switching, and archiving", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -91,14 +91,9 @@ test("tasks, comments, phase switching, and archive restore", async ({
     page.getByRole("button", { name: "Implementation planning: current phase" }),
   ).toBeVisible();
 
-  // Archive the task, then restore it to its previous status.
+  // Archived is just a status — leaving it is an ordinary status change.
   await setTaskStatus(page, "archived");
-  await page
-    .getByRole("button", { name: "Restore task", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "Task status", exact: true }),
-  ).toHaveText("Focus");
+  await setTaskStatus(page, "focus");
 
   expect(errors).toEqual([]);
 });

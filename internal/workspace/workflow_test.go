@@ -32,12 +32,13 @@ func TestTaskStateAndWorkflowSnapshot(t *testing.T) {
 	if task.AgentStatus == nil {
 		t.Fatal("archiving must not imply agent cancellation")
 	}
-	if _, err := s.RestoreTask(task.ID, oldRevision); !errors.Is(err, ErrConflict) {
-		t.Fatalf("stale restore: %v", err)
+	if _, err := s.UpdateTask(task.ID, oldRevision, TaskUpdate{Status: "focus", Fields: []string{"status"}}); !errors.Is(err, ErrConflict) {
+		t.Fatalf("stale status update: %v", err)
 	}
-	task, err = s.RestoreTask(task.ID, task.Revision)
+	// Archived is just a status: leaving it is an ordinary status change.
+	task, err = s.UpdateTask(task.ID, task.Revision, TaskUpdate{Status: "focus", Fields: []string{"status"}})
 	if err != nil || task.Status != "focus" {
-		t.Fatalf("restore: %v %+v", err, task)
+		t.Fatalf("unarchive: %v %+v", err, task)
 	}
 	w, _ := s.GetWorkflow()
 	w.Phases[0].Name = "New goal name"

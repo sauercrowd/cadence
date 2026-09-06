@@ -553,7 +553,7 @@ pre {
 .table-heading,
 .task-row {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 150px 62px 26px;
+  grid-template-columns: 34px minmax(0, 1fr) 210px;
   align-items: center;
   gap: var(--s3);
   padding: 0 var(--s3);
@@ -606,20 +606,19 @@ pre {
 .task-title:hover strong {
   color: var(--structure);
 }
+/* Progress first, then the phase it's currently in. */
+.task-status-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+}
 .phase-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--fs-ui);
   color: var(--muted);
-}
-.row-open {
-  opacity: 0;
-  justify-self: end;
-}
-.task-row:hover .row-open,
-.row-open:focus-visible {
-  opacity: 1;
 }
 
 /* Phase progress — the only place besides the timeline that uses signal. */
@@ -800,17 +799,6 @@ pre {
   letter-spacing: -0.015em;
   color: var(--ink);
 }
-.task-properties {
-  display: flex;
-  align-items: center;
-  gap: var(--s3);
-  margin-top: 5px;
-  min-height: 0;
-}
-.task-properties:empty {
-  display: none;
-}
-
 .task-body {
   display: flex;
   flex: 1;
@@ -1832,7 +1820,7 @@ details > summary {
   }
   .table-heading,
   .task-row {
-    grid-template-columns: 30px minmax(0, 1fr) 120px 56px 24px;
+    grid-template-columns: 30px minmax(0, 1fr) 170px;
     gap: var(--s2);
   }
 }
@@ -1875,14 +1863,12 @@ details > summary {
 }
 
 @media (max-width: 620px) {
+  /* Narrow: keep progress, drop the phase name. */
   .table-heading,
   .task-row {
-    grid-template-columns: 28px minmax(0, 1fr) 24px;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
   }
-  .table-heading > span:nth-child(3),
-  .table-heading > span:nth-child(4),
-  .phase-label,
-  .phase-preview {
+  .phase-label {
     display: none;
   }
   .workflow-layout {

@@ -16,6 +16,16 @@ Later revision: tasks no longer snapshot the workflow's phase definitions. `Task
 
 Later revision: the external-session handoff feature (Copy prompt button, `PromptDialog`, `web/src/features/handoff/`) is removed, along with the "Current phase" text label in the phase header — both were redundant with the phase timeline. Setting the current phase now happens directly in the timeline: each phase's number badge is its own button (separate from the phase-name button, which still navigates); hovering or focusing an eligible badge previews the current-phase styling (filled, purple) and swaps the number/checkmark for a clock icon, and clicking it calls the same revision-checked `UpdateTask`. The current phase's own badge is disabled. The task breadcrumb header (back arrow, "Tasks", task code) is merged into the task heading row — the back button now sits directly left of the priority badge; the task code is no longer shown. The Agent instructions tab is scoped to phase documents only (`DocumentEditor`'s `showInstructions` prop, `false` for supporting documents) — instructions describe a phase's handoff, not arbitrary notes. The sidebar's workflow-settings link moved out of its own "Configuration" section to sit directly under Tasks, and is now labeled "Phases" (route and internal naming unchanged).
 
+Later revision: restore is gone as a concept — archived is just one of the four
+task statuses, so leaving it is an ordinary status change through the same `/`
+picker. `Task.PreviousStatus`, `Store.RestoreTask`, and the `ArchiveTask` /
+`RestoreTask` RPCs (plus `RevisionTaskRequest`) are removed; the frontend already
+archived through `UpdateTask`. The task list also merges its Phase and Progress
+columns into one "Status" column — progress bubbles first, then the phase name —
+and drops the trailing action column, since the row title is already the control
+that opens the task. The UI runs on the Ink & Amber token system documented in
+AGENTS.md.
+
 Interaction differences from the proposed design: adjacent comment dots are staggered instead of grouped into a picker; unattached threads remain available as dots near the document top; workflow edits survive in-app navigation in memory, while document drafts use IndexedDB. Rich-editor selection is cached per document; undo history is scoped to a mounted editor. Source mode preserves unsupported Markdown. See README for the supported subset and external-writer race limitation.
 
 Verification uses Vitest, temporary-workspace Go tests, and Playwright against the production build. Automated checks are not a substitute for a longer hands-on writing session to judge editor feel.

@@ -104,20 +104,6 @@ export function TaskWorkspace({
           onUpdate={update}
           onBack={onBack}
         />
-        <div className="task-properties">
-          {task.status === "archived" && (
-            <button
-              className="text-button"
-              onClick={() =>
-                void run(async () =>
-                  onTask(await api.restore(await api.task(task.id))),
-                )
-              }
-            >
-              Restore task
-            </button>
-          )}
-        </div>
       </div>
       <div className="task-body">
         <aside className="phase-navigation">

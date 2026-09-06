@@ -249,9 +249,6 @@ func (s *Store) UpdateTask(id, expected string, update TaskUpdate) (Task, error)
 				return t, err
 			}
 		case "status":
-			if update.Status == "archived" && t.Status != "archived" {
-				t.PreviousStatus = t.Status
-			}
 			t.Status = update.Status
 		case "priority":
 			t.Priority = update.Priority
@@ -272,30 +269,6 @@ func (s *Store) UpdateTask(id, expected string, update TaskUpdate) (Task, error)
 			return t, fmt.Errorf("%w: unknown task field", ErrInvalidName)
 		}
 	}
-	t.UpdatedAt = time.Now().UTC()
-	if err := s.writeTask(t); err != nil {
-		return t, err
-	}
-	return s.readTask(id)
-}
-func (s *Store) RestoreTask(id, expected string) (Task, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	t, err := s.readTask(id)
-	if err != nil {
-		return t, err
-	}
-	if expected == "" || expected != t.Revision {
-		return t, ErrConflict
-	}
-	if t.Status != "archived" {
-		return t, fmt.Errorf("%w: task is not archived", ErrInvalidName)
-	}
-	t.Status = t.PreviousStatus
-	if t.Status == "" || t.Status == "archived" {
-		t.Status = "open"
-	}
-	t.PreviousStatus = ""
 	t.UpdatedAt = time.Now().UTC()
 	if err := s.writeTask(t); err != nil {
 		return t, err

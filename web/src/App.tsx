@@ -256,9 +256,6 @@ export default function App() {
             route={route}
             onOpen={openTask}
             onCreate={create}
-            onRestore={(task) => {
-              void api.restore(task).then(onTask).catch(onError);
-            }}
           />
         )}
       </main>

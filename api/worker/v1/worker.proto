@@ -36,7 +36,6 @@ message TaskPhase { PhaseDefinition definition = 1; string document_id = 2; rese
 message Workflow { repeated PhaseDefinition phases = 1; string revision = 2; }
 message WorkspaceInfo { string id = 1; string name = 2; }
 message UpdateTaskRequest { string id = 1; string revision = 2; string name = 3; TaskStatus status = 4; int32 priority = 5; AgentStatus agent_status = 6; reserved 7; google.protobuf.FieldMask update_mask = 8; string current_phase_id = 9; }
-message RevisionTaskRequest { string id = 1; string revision = 2; }
 message UpdateWorkflowRequest { Workflow workflow = 1; string revision = 2; }
 
 message Document {
@@ -93,8 +92,6 @@ service WorkspaceService {
   rpc GetWorkspace(google.protobuf.Empty) returns (WorkspaceInfo) { option idempotency_level = NO_SIDE_EFFECTS; }
   rpc GetTask(TaskRequest) returns (Task) { option idempotency_level = NO_SIDE_EFFECTS; }
   rpc UpdateTask(UpdateTaskRequest) returns (Task) {}
-  rpc ArchiveTask(RevisionTaskRequest) returns (Task) {}
-  rpc RestoreTask(RevisionTaskRequest) returns (Task) {}
   rpc GetWorkflow(google.protobuf.Empty) returns (Workflow) { option idempotency_level = NO_SIDE_EFFECTS; }
   rpc UpdateWorkflow(UpdateWorkflowRequest) returns (Workflow) {}
   rpc ListTasks(google.protobuf.Empty) returns (ListTasksResponse) {

@@ -40,7 +40,6 @@ type Task struct {
 	Priority       int               `json:"priority"`
 	AgentStatus    *string           `json:"agentStatus"`
 	CurrentPhaseID string            `json:"currentPhaseId"`
-	PreviousStatus string            `json:"previousStatus,omitempty"`
 	Phases         []TaskPhase       `json:"phases"`
 	Revision       string            `json:"-"`
 }

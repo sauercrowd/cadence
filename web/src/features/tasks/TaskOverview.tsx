@@ -1,14 +1,6 @@
 import { TaskFilter } from "./TaskFilter";
 import { useEffect } from "react";
-import {
-  Check,
-  Bot,
-  List,
-  Columns3,
-  Plus,
-  ArrowUpRight,
-  CircleDot,
-} from "lucide-react";
+import { Check, Bot, List, Columns3, Plus, CircleDot } from "lucide-react";
 import type { Task } from "../../data/api";
 import { setQuery } from "../../app/router";
 import { statusLabels, StatusIcon } from "./status";
@@ -49,13 +41,11 @@ export function TaskOverview({
   route,
   onOpen,
   onCreate,
-  onRestore,
 }: {
   tasks: Task[];
   route: URL;
   onOpen: (task: Task) => void;
   onCreate: () => void;
-  onRestore: (task: Task) => void;
 }) {
   const archived = route.searchParams.get("status") === "archived",
     board = route.searchParams.get("view") === "board";
@@ -230,9 +220,7 @@ export function TaskOverview({
           <div className="table-heading">
             <span>Pri</span>
             <span>Task</span>
-            <span>Phase</span>
-            <span>Progress</span>
-            <span />
+            <span>Status</span>
           </div>
           {filtered.map((t) => (
             <div className="task-row" key={t.id}>
@@ -243,24 +231,13 @@ export function TaskOverview({
                   <strong>{t.title}</strong>
                 </span>
               </button>
-              <span className="phase-label">
-                {t.phases.find((p) => p.definition.id === t.currentPhaseId)
-                  ?.definition.name || "—"}
+              <span className="task-status-cell">
+                <PhasePreview task={t} />
+                <span className="phase-label">
+                  {t.phases.find((p) => p.definition.id === t.currentPhaseId)
+                    ?.definition.name || "—"}
+                </span>
               </span>
-              <PhasePreview task={t} />
-              {t.status === "archived" ? (
-                <button className="text-button" onClick={() => onRestore(t)}>
-                  Restore
-                </button>
-              ) : (
-                <button
-                  className="icon-button row-open"
-                  aria-label={`Open ${t.title}`}
-                  onClick={() => onOpen(t)}
-                >
-                  <ArrowUpRight size={15} />
-                </button>
-              )}
             </div>
           ))}
         </div>
