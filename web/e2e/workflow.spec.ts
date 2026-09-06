@@ -49,9 +49,7 @@ async function selectText(page: Page, text: string) {
   await page.getByRole("button", { name: "Add comment", exact: true }).click();
 }
 
-test("tasks, comments, phase switching, and archiving", async ({
-  page,
-}) => {
+test("tasks, comments, phase switching, and archiving", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await createTask(page, "Shape the agent workflow");
@@ -78,6 +76,19 @@ test("tasks, comments, phase switching, and archiving", async ({
   await expect(dot).toBeVisible();
   await expect(dot).toHaveClass(/resolved/);
 
+  await page.getByRole("button", { name: "Source", exact: true }).click();
+  await expect(
+    page.getByRole("textbox", { name: "Markdown source" }),
+  ).toContainText("```cadence-comments");
+  await expect(page.locator(".save-status.saved")).toContainText("Saved");
+  await page.reload();
+  await page.getByRole("button", { name: "Spec", exact: true }).click();
+  await expect(dot).toBeVisible();
+  await expect(dot).toHaveClass(/resolved/);
+  await expect(
+    page.getByRole("textbox", { name: "Document body", exact: true }),
+  ).not.toContainText("cadence-comments");
+
   // Move to implementation planning and make it the current phase by
   // hovering/clicking its timeline number, which swaps to a clock icon.
   await page
@@ -93,7 +104,9 @@ test("tasks, comments, phase switching, and archiving", async ({
   );
   await makeCurrent.click();
   await expect(
-    page.getByRole("button", { name: "Implementation planning: current phase" }),
+    page.getByRole("button", {
+      name: "Implementation planning: current phase",
+    }),
   ).toBeVisible();
 
   // Archived is just a status — leaving it is an ordinary status change.

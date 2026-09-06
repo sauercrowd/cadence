@@ -4,9 +4,9 @@ import { test, expect } from "@playwright/test";
 const PNG_BASE64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
-test("pasted images become attachments and iframes embed", async ({
-  page,
-}) => {
+test("pasted images become attachments and iframes embed", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/tasks");
   await page
     .getByRole("main")
@@ -41,12 +41,6 @@ test("pasted images become attachments and iframes embed", async ({
   expect(stored.status()).toBe(200);
   expect(stored.headers()["content-type"]).toBe("image/png");
 
-  // The iframe toolbar button embeds a URL behind a sandboxed frame.
-  page.on("dialog", (dialog) => void dialog.accept("https://example.com/"));
-  await page.getByRole("button", { name: "Embed iframe", exact: true }).click();
-  const frame = page.locator('.rich-editor .embed iframe[src="https://example.com/"]');
-  await expect(frame).toBeVisible();
-
   // Dropped videos preview with native controls; other files become links.
   async function drop(name: string, type: string, bytes: number[]) {
     await page.evaluate(
@@ -69,40 +63,47 @@ test("pasted images become attachments and iframes embed", async ({
   await drop("clip.mp4", "video/mp4", [0, 0, 0, 24]);
   await expect(page.locator(".rich-editor .embed video")).toBeVisible();
   await drop("notes.txt", "text/plain", [104, 105]);
-  await expect(page.locator(".rich-editor").getByText("notes.txt")).toBeVisible();
+  await expect(
+    page.locator(".rich-editor").getByText("notes.txt"),
+  ).toBeVisible();
+
+  expect(errors).toEqual([]);
+  const download = page.getByRole("link", { name: "notes.txt", exact: true });
+  const href = (await download.getAttribute("href"))!;
+  expect(href).toMatch(/^\/api\/tasks\/[^/]+\/attachments\/[^/]+\.txt$/);
+  expect((await page.request.get(href)).status()).toBe(200);
 
   // The file stays plain Markdown with relative references.
   await expect(page.locator(".save-status.saved")).toContainText("Saved");
   await page.getByRole("button", { name: "Source", exact: true }).click();
   const source = page.getByRole("textbox", { name: "Markdown source" });
-  await expect(source).toContainText(/!\[\]\(.+?\.png\)/);
-  await expect(source).toContainText(
-    '<iframe src="https://example.com/"></iframe>',
-  );
-
+  await expect(source).toContainText(/!\[\]\(assets\/.+?\.png\)/);
   // Inline HTML embeds render their content in a sandboxed frame.
   const markdown = page.getByRole("textbox", { name: "Markdown source" });
-  await expect(markdown).toContainText(/<video src=".+?\.mp4" controls>/);
-  await expect(markdown).toContainText(/\[notes\.txt\]\(.+?\.txt\)/);
+  await expect(markdown).toContainText(
+    /<video src="assets\/.+?\.mp4" controls>/,
+  );
+  await expect(markdown).toContainText(/\[notes\.txt\]\(assets\/.+?\.txt\)/);
   await page.locator(".source-editor .cm-content").click();
   await page.keyboard.press("Control+Home");
-  await page.keyboard.type('<iframe srcdoc="<p>Hello srcdoc</p>"></iframe>');
+  await page.keyboard.insertText(
+    "```cadence-html\n<style>p { color: navy; }</style>\n<p>Hello srcdoc</p>\n```\n\n",
+  );
   await page.keyboard.press("Enter");
   await page.getByRole("button", { name: "Spec", exact: true }).click();
   await expect(
-    page
-      .frameLocator(".rich-editor iframe[srcdoc]")
-      .getByText("Hello srcdoc"),
+    page.frameLocator(".rich-editor iframe[srcdoc]").getByText("Hello srcdoc"),
   ).toBeVisible();
 
-  // Attachments survive a reload.
+  // Attachments and HTML survive a saved reload.
+  await expect(page.locator(".save-status.saved")).toContainText("Saved");
   await page.reload();
   await page
     .getByRole("textbox", { name: "Document body", exact: true })
     .waitFor();
   await expect(page.locator(".rich-editor .embed img")).toBeVisible();
   await expect(
-    page.locator('.rich-editor .embed iframe[src="https://example.com/"]'),
+    page.locator(".rich-editor .embed iframe[srcdoc]"),
   ).toBeVisible();
 
   // The shield takes the first click (selecting the embed) and steps aside
@@ -114,4 +115,16 @@ test("pasted images become attachments and iframes embed", async ({
   await expect(shield).toBeHidden();
   await page.getByRole("heading", { name: "Goal", exact: true }).click();
   await expect(shield).toBeVisible();
+  await page.setViewportSize({ width: 600, height: 800 });
+  await expect(page.locator(".rich-editor iframe[srcdoc]")).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.getByRole("button", { name: "Source", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("textbox", { name: "Markdown source" }),
+  ).toContainText("```cadence-html");
 });

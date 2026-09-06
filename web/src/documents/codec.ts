@@ -11,12 +11,12 @@ export type DocumentFile = {
 // Only an unindented, trailing metadata block is special. Fenced examples remain Markdown.
 export function envelopeOffset(content: string): number {
   let offset = 0,
-    candidate = -1,
     fence = "",
     length = 0;
   for (const line of content.split(/(?<=\n)/)) {
     const value = line.replace(/\r?\n$/, "");
     const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(value);
+    if (!fence && /^`{3,}cadence-comments[ \t]*$/.test(value)) return offset;
     if (marker) {
       if (!fence && !(marker[1][0] === "`" && marker[2].includes("`"))) {
         fence = marker[1][0];
@@ -27,11 +27,10 @@ export function envelopeOffset(content: string): number {
         !marker[2].trim()
       )
         fence = "";
-    } else if (candidate < 0 && !fence && value === "<comments>")
-      candidate = offset;
+    }
     offset += line.length;
   }
-  return candidate;
+  return -1;
 }
 
 // Finds the first unindented, unfenced <tag>...</tag> block anywhere in the
@@ -95,14 +94,23 @@ export function parseFile(content: string): DocumentFile {
     return { body: withoutPrompt, threads: [], agentPrompt, original: content };
   const body = withoutPrompt.slice(0, offset);
   try {
-    const match = /^<comments>\r?\n([\s\S]*?)\r?\n<\/comments>\s*$/.exec(
-      withoutPrompt.slice(offset),
-    );
-    if (!match)
+    const section = withoutPrompt.slice(offset);
+    const opening = /^(`{3,})cadence-comments[ \t]*\r?\n/.exec(section);
+    if (!opening)
       throw new Error(
-        "The comments section is incomplete. Repair it in file source before editing.",
+        "The comments code block is incomplete. Repair it in file source before editing.",
       );
-    const data: unknown = JSON.parse(match[1]);
+    const closing = new RegExp(
+      "^`{" + opening[1].length + ",}[ \\t]*\\r?$",
+      "m",
+    );
+    const remainder = section.slice(opening[0].length);
+    const end = closing.exec(remainder);
+    if (!end || remainder.slice(end.index + end[0].length).trim())
+      throw new Error(
+        "The comments section must be a complete trailing code block. Repair it in file source before editing.",
+      );
+    const data: unknown = JSON.parse(remainder.slice(0, end.index));
     if (!object(data) || !Array.isArray(data.threads))
       throw new Error("Invalid comments section.");
     if (data.version === 2) {
@@ -111,7 +119,12 @@ export function parseFile(content: string): DocumentFile {
         throw new Error(
           "Invalid comment thread data. Repair the original file source to continue.",
         );
-      return { body, threads: parsed.data.threads, agentPrompt, original: content };
+      return {
+        body,
+        threads: parsed.data.threads,
+        agentPrompt,
+        original: content,
+      };
     }
     throw new Error(
       "Unsupported comments format. Its contents have been preserved.",
@@ -138,7 +151,7 @@ export function serializeFile(
     result = `${result}${result.endsWith("\n") ? "" : "\n"}<agent-instructions>\n${agentPrompt}\n</agent-instructions>\n`;
   }
   if (threads.length) {
-    result = `${result}${result.endsWith("\n") ? "" : "\n"}<comments>\n${JSON.stringify({ version: 2, threads }, null, 2)}\n</comments>\n`;
+    result = `${result}${result.endsWith("\n") ? "" : "\n"}\`\`\`cadence-comments\n${JSON.stringify({ version: 2, threads }, null, 2)}\n\`\`\`\n`;
   }
   return result;
 }

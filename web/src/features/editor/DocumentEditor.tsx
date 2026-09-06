@@ -3,6 +3,9 @@ import {
   $createParagraphNode,
   $createTextNode,
   $getSelection,
+  $getNodeByKey,
+  $nodesOfType,
+  $isTextNode,
   $isRangeSelection,
   $getRoot,
   $setSelection,
@@ -30,7 +33,13 @@ import {
   INSERT_UNORDERED_LIST_COMMAND,
   INSERT_CHECK_LIST_COMMAND,
 } from "@lexical/list";
-import { LinkExtension, TOGGLE_LINK_COMMAND } from "@lexical/link";
+import {
+  LinkExtension,
+  TOGGLE_LINK_COMMAND,
+  LinkNode,
+  $createLinkNode,
+  $isLinkNode,
+} from "@lexical/link";
 import { TableExtension, INSERT_TABLE_COMMAND } from "@lexical/table";
 import { CodeNode, $createCodeNode } from "@lexical/code";
 import {
@@ -58,7 +67,6 @@ import {
   Link,
   MessageSquarePlus,
   Table,
-  Frame,
   Undo2,
   Redo2,
 } from "lucide-react";
@@ -75,7 +83,12 @@ import {
   anchorRect,
 } from "./anchors";
 import { markdownTransformers, sourceOnlyReason } from "./markdown";
-import { EmbedNode, $createEmbedNode, embedContext } from "./embeds";
+import {
+  EmbedNode,
+  $createEmbedNode,
+  EmbedTaskContext,
+  attachmentUrl,
+} from "./embeds";
 import { ThreadOverlay } from "./ThreadOverlay";
 import { SourceEditor } from "./SourceEditor";
 import { api } from "../../data/api";
@@ -84,6 +97,7 @@ type Props = {
   content: string;
   onChange: (content: string) => void;
   onError?: (error: unknown) => void;
+  onUploadComplete?: (marker: string, markdown: string) => void;
   cacheKey?: string;
   showInstructions?: boolean;
   taskId?: string;
@@ -118,13 +132,12 @@ export function DocumentEditor({
   content,
   onChange,
   onError,
+  onUploadComplete,
   cacheKey,
   showInstructions = true,
   taskId = "",
 }: Props) {
   const parsed = useMemo(() => parseFile(content), []);
-  // Relative attachment paths in the document resolve against this task.
-  embedContext.taskId = taskId;
   const [mode, setMode] = useState<"spec" | "instructions" | "source">(
     parsed.error || sourceOnlyReason(parsed.body) ? "source" : "spec",
   );
@@ -141,65 +154,75 @@ export function DocumentEditor({
   const current = parseFile(latest.current);
   const reason = current.error || sourceOnlyReason(current.body);
   return (
-    <div className="document-editor">
-      <div className="editor-mode">
-        <div className="segmented">
-          <button
-            className={mode === "spec" ? "selected" : ""}
-            disabled={!!reason}
-            onClick={() => go("spec")}
-          >
-            Spec
-          </button>
-          {showInstructions && (
+    <EmbedTaskContext.Provider value={taskId}>
+      <div className="document-editor">
+        <div className="editor-mode">
+          <div className="segmented">
             <button
-              className={mode === "instructions" ? "selected" : ""}
+              className={mode === "spec" ? "selected" : ""}
               disabled={!!reason}
-              onClick={() => go("instructions")}
+              onClick={() => go("spec")}
             >
-              Agent instructions
+              Spec
             </button>
-          )}
-          <button
-            className={mode === "source" ? "selected" : ""}
-            onClick={() => go("source")}
-          >
-            Source
-          </button>
+            {showInstructions && (
+              <button
+                className={mode === "instructions" ? "selected" : ""}
+                disabled={!!reason}
+                onClick={() => go("instructions")}
+              >
+                Agent instructions
+              </button>
+            )}
+            <button
+              className={mode === "source" ? "selected" : ""}
+              onClick={() => go("source")}
+            >
+              Source
+            </button>
+          </div>
         </div>
+        {reason && <div className="notice">{reason}</div>}
+        {mode === "source" ? (
+          <SourceEditor
+            key={`source-${generation}`}
+            value={latest.current}
+            label={current.error ? "File source for repair" : "Markdown source"}
+            onChange={(value) => update(value)}
+          />
+        ) : mode === "instructions" ? (
+          <SourceEditor
+            key={`instructions-${generation}`}
+            value={current.agentPrompt}
+            label="Agent instructions"
+            onChange={(value) =>
+              update(serializeFile(current.body, current.threads, value))
+            }
+          />
+        ) : (
+          <RichEditor
+            key={`rich-${generation}`}
+            content={latest.current}
+            onChange={update}
+            onError={onError}
+            onUploadComplete={onUploadComplete}
+            cacheKey={cacheKey}
+            taskId={taskId}
+          />
+        )}
       </div>
-      {reason && <div className="notice">{reason}</div>}
-      {mode === "source" ? (
-        <SourceEditor
-          key={`source-${generation}`}
-          value={latest.current}
-          label={current.error ? "File source for repair" : "Markdown source"}
-          onChange={(value) => update(value)}
-        />
-      ) : mode === "instructions" ? (
-        <SourceEditor
-          key={`instructions-${generation}`}
-          value={current.agentPrompt}
-          label="Agent instructions"
-          onChange={(value) =>
-            update(serializeFile(current.body, current.threads, value))
-          }
-        />
-      ) : (
-        <RichEditor
-          key={`rich-${generation}`}
-          content={latest.current}
-          onChange={update}
-          onError={onError}
-          cacheKey={cacheKey}
-          taskId={taskId}
-        />
-      )}
-    </div>
+    </EmbedTaskContext.Provider>
   );
 }
 
-function RichEditor({ content, onChange, onError, cacheKey, taskId }: Props) {
+function RichEditor({
+  content,
+  onChange,
+  onError,
+  onUploadComplete,
+  cacheKey,
+  taskId,
+}: Props) {
   const initial = useMemo(() => parseFile(content), []);
   const extension = useMemo(() => {
     const cached = cacheKey ? editorCache.get(cacheKey) : undefined;
@@ -241,6 +264,7 @@ function RichEditor({ content, onChange, onError, cacheKey, taskId }: Props) {
         taskId={taskId}
         onChange={onChange}
         onError={onError}
+        onUploadComplete={onUploadComplete}
       />
     </LexicalExtensionComposer>
   );
@@ -250,6 +274,7 @@ function EditorSurface({
   initial,
   onChange,
   onError,
+  onUploadComplete,
   content,
   cacheKey,
   taskId = "",
@@ -334,49 +359,130 @@ function EditorSurface({
       nestedMarks();
     };
   }, [editor]);
-  // Pasted or dropped files are saved as task attachments first, then
-  // embedded by name so the Markdown stays portable. Images and videos get
-  // preview blocks; anything else becomes an attachment link.
+  // Keep Markdown links portable while resolving their DOM targets per task.
+  useEffect(
+    () =>
+      editor.registerMutationListener(LinkNode, (mutations) => {
+        editor.getEditorState().read(() => {
+          for (const [key, mutation] of mutations) {
+            if (mutation === "destroyed") continue;
+            const node = $getNodeByKey(key);
+            const element = editor.getElementByKey(key);
+            if ($isLinkNode(node) && element) {
+              const url = node.getURL();
+              if (/^(?:\.\/)?assets\//.test(url))
+                element.setAttribute("href", attachmentUrl(url, taskId));
+            }
+          }
+        });
+      }),
+    [editor, taskId],
+  );
+
+  // Save a unique marker immediately. Completion replaces it at its original
+  // location, either in this editor or in the owning document session.
   useEffect(() => {
-    if (!taskId) return;
-    return editor.registerCommand(
+    if (!taskId || !onUploadComplete) return;
+    let mounted = true;
+    const unregister = editor.registerCommand(
       DRAG_DROP_PASTE,
       (files) => {
         if (!files.length) return false;
         for (const file of files) {
+          const marker = `cadence-upload:${crypto.randomUUID()}`;
+          const pending = $createLinkNode(marker);
+          pending.append(
+            $createTextNode(`Uploading ${file.name.replace(/\s+/g, " ")}`),
+          );
+          const paragraph = $createParagraphNode().append(pending);
+          const selection = $getSelection();
+          if ($isRangeSelection(selection)) selection.insertNodes([paragraph]);
+          else $getRoot().append(paragraph);
+          const kind = file.type.startsWith("image/")
+            ? "image"
+            : file.type.startsWith("video/")
+              ? "video"
+              : null;
           void api
             .uploadAttachment(taskId, file)
-            .then(({ name }) =>
+            .then(({ name }) => {
+              const src = `assets/${name}`;
+              const label = file.name
+                .replace(/\\/g, "\\\\")
+                .replace(/([\[\]])/g, "\\$1")
+                .replace(/\s+/g, " ");
+              const markdown =
+                kind === "image"
+                  ? `![](${src})`
+                  : kind === "video"
+                    ? `<video src="${src}" controls></video>`
+                    : `[${label}](${src})`;
+              if (!mounted) {
+                onUploadComplete(marker, markdown);
+                return;
+              }
               editor.update(() => {
-                const kind = file.type.startsWith("image/")
-                  ? "image"
-                  : file.type.startsWith("video/")
-                    ? "video"
-                    : null;
-                const selection = $getSelection();
-                if (kind) {
-                  const node = $createEmbedNode(kind, name);
-                  if ($isRangeSelection(selection))
-                    selection.insertNodes([node]);
-                  else $getRoot().append(node);
+                const node = $nodesOfType(LinkNode).find(
+                  (node) => node.isAttached() && node.getURL() === marker,
+                );
+
+                if (!node) return;
+                if (!kind) {
+                  node.setURL(src);
+                  const text = node.getFirstChild();
+                  if ($isTextNode(text)) {
+                    text.setTextContent(file.name);
+                    const selected = $getSelection();
+                    if ($isRangeSelection(selected)) {
+                      for (const point of [selected.anchor, selected.focus]) {
+                        if (point.key === text.getKey())
+                          point.set(
+                            point.key,
+                            Math.min(point.offset, file.name.length),
+                            "text",
+                          );
+                      }
+                    }
+                  }
                   return;
                 }
-                const link = `[${file.name.replace(/\]/g, "\\]")}](${name})`;
-                if ($isRangeSelection(selection)) selection.insertText(link);
-                else {
-                  const paragraph = $createParagraphNode();
-                  paragraph.append($createTextNode(link));
-                  $getRoot().append(paragraph);
-                }
-              }),
-            )
-            .catch((error) => onError?.(error));
+                // Inserting at the marker lets Lexical split any surrounding
+                // paragraph without overwriting text typed during the upload.
+                const previous = $getSelection()?.clone() ?? null;
+                node.selectStart().insertNodes([$createEmbedNode(kind, src)]);
+                node.remove();
+                if (
+                  previous &&
+                  (!$isRangeSelection(previous) ||
+                    ($getNodeByKey(previous.anchor.key)?.isAttached() &&
+                      $getNodeByKey(previous.focus.key)?.isAttached()))
+                )
+                  $setSelection(previous);
+              });
+            })
+            .catch((error) => {
+              // A failed upload becomes readable text, never a broken link.
+              const message = `Upload failed: ${file.name.replace(/[\[\]\n\r]/g, " ")}`;
+              if (!mounted) onUploadComplete(marker, message);
+              else
+                editor.update(() => {
+                  const node = $nodesOfType(LinkNode).find(
+                    (node) => node.isAttached() && node.getURL() === marker,
+                  );
+                  if (node) node.replace($createTextNode(message));
+                });
+              onError?.(error);
+            });
         }
         return true;
       },
       COMMAND_PRIORITY_HIGH,
     );
-  }, [editor, taskId, onError]);
+    return () => {
+      mounted = false;
+      unregister();
+    };
+  }, [editor, taskId]);
   useEffect(() => {
     measure();
     const observer = new ResizeObserver(measure);
@@ -528,24 +634,6 @@ function EditorSurface({
           }}
         >
           <Link size={14} />
-        </button>
-        <button
-          aria-label="Embed iframe"
-          title="Embed iframe"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => {
-            const url = window.prompt("Embed URL (https://…)");
-            if (url && /^https?:\/\//i.test(url))
-              editor.update(() => {
-                const node = $createEmbedNode("iframe", url);
-                const selection = $getSelection();
-                if ($isRangeSelection(selection))
-                  selection.insertNodes([node]);
-                else $getRoot().append(node);
-              });
-          }}
-        >
-          <Frame size={14} />
         </button>
         <i />
         <button

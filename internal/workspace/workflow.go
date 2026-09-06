@@ -107,19 +107,19 @@ func (s *Store) workspaceLogo() (string, []byte, error) {
 			return "", nil, ErrNotFound
 		}
 	}
-	path := filepath.Join(s.root, logo)
-	if relative, err := filepath.Rel(s.root, path); err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-		return "", nil, ErrNotFound
-	}
-	if info, err := os.Lstat(path); err != nil || !info.Mode().IsRegular() {
-		return "", nil, ErrNotFound
-	}
-	data, err := os.ReadFile(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return "", nil, ErrNotFound
-	}
+	root, err := os.OpenRoot(s.root)
 	if err != nil {
-		return "", nil, fmt.Errorf("read workspace logo: %w", err)
+		return "", nil, fmt.Errorf("open workspace root: %w", err)
+	}
+	defer root.Close()
+	// Root resolves every component beneath the project, including symlinks,
+	// and keeps that boundary enforced during the read.
+	if info, err := root.Lstat(logo); err != nil || !info.Mode().IsRegular() {
+		return "", nil, ErrNotFound
+	}
+	data, err := root.ReadFile(logo)
+	if err != nil {
+		return "", nil, fmt.Errorf("%w: read workspace logo: %v", ErrNotFound, err)
 	}
 	contentType := http.DetectContentType(data)
 	if strings.HasSuffix(strings.ToLower(s.info.LogoPath), ".svg") {

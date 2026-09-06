@@ -8,16 +8,19 @@ import {
   type NodeKey,
   type SerializedLexicalNode,
 } from "lexical";
-import type { JSX } from "react";
-import type { ElementTransformer } from "@lexical/markdown";
+import { createContext, useContext, type JSX } from "react";
+import type {
+  ElementTransformer,
+  MultilineElementTransformer,
+} from "@lexical/markdown";
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 
 /**
  * One block node for every embed the documents support: pasted images,
  * videos, and iframe embeds. Anything else dropped in becomes a plain
- * attachment link. Everything about one is derived from its single line of
- * Markdown, so the file stays the source of truth.
+ * attachment link. Embed content is stored in Markdown, so the file stays
+ * the source of truth.
  */
 export type EmbedKind = "image" | "video" | "iframe";
 
@@ -120,11 +123,7 @@ export class EmbedNode extends DecoratorNode<JSX.Element> {
           const src = img.getAttribute("src");
           if (!src) return null;
           return {
-            node: $createEmbedNode(
-              "image",
-              src,
-              img.getAttribute("alt") ?? "",
-            ),
+            node: $createEmbedNode("image", src, img.getAttribute("alt") ?? ""),
           };
         },
         priority: 1,
@@ -138,13 +137,21 @@ export class EmbedNode extends DecoratorNode<JSX.Element> {
       img.setAttribute("alt", this.__alt);
       return { element: img };
     }
-    const iframe = document.createElement("iframe");
-    // An empty src would load the parent page into itself; only set it
-    // when the embed actually points at a URL.
-    if (this.__src) iframe.setAttribute("src", this.__src);
-    if (this.__srcdoc) iframe.setAttribute("srcdoc", this.__srcdoc);
-    if (this.__title) iframe.setAttribute("title", this.__title);
-    return { element: iframe };
+    const element = document.createElement(
+      this.__kind === "video" ? "video" : "iframe",
+    );
+    if (this.__kind === "video") {
+      element.setAttribute("src", this.__src);
+      element.setAttribute("controls", "");
+    } else {
+      element.setAttribute("srcdoc", this.__srcdoc);
+      element.setAttribute(
+        "sandbox",
+        "allow-scripts allow-popups allow-top-navigation-by-user-activation",
+      );
+    }
+    if (this.__title) element.setAttribute("title", this.__title);
+    return { element };
   }
 
   decorate(_editor: LexicalEditor, _config: EditorConfig): JSX.Element {
@@ -194,7 +201,12 @@ export const IMAGE: ElementTransformer = {
   regExp: /^!\[((?:\\.|[^\]])*)\]\((\S+?)(?:\s+"([^"]*)")?\)$/,
   replace: (parent, _children, match) => {
     parent.replace(
-      $createEmbedNode("image", match[2], unescapeAlt(match[1]), match[3] ?? ""),
+      $createEmbedNode(
+        "image",
+        match[2],
+        unescapeAlt(match[1]),
+        match[3] ?? "",
+      ),
     );
   },
   export: (node) => {
@@ -204,74 +216,125 @@ export const IMAGE: ElementTransformer = {
   },
 };
 
-/** Attribute values in double quotes; `&` first so the two stay inverses. */
-function escapeAttr(value: string) {
-  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
-}
-function unescapeAttr(value: string) {
-  return value.replace(/&quot;/g, '"').replace(/&amp;/g, "&");
-}
-
-/**
- * `<iframe src="…" title="…">` or `<iframe srcdoc="…">` on its own line.
- * Kept as raw HTML in the file so it stays readable and editable in any
- * editor; rendered as a live embed here. The attribute pattern tolerates
- * `>` inside quoted values, which inline HTML is full of.
- */
-const IFRAME_ATTRS = `((?:"[^"]*"|'[^']*'|[^>])*)`;
-export const IFRAME: ElementTransformer = {
-  type: "element",
+/** Explicit HTML fences render in an opaque-origin sandbox. */
+export const HTML_EMBED: MultilineElementTransformer = {
+  type: "multiline-element",
   dependencies: [EmbedNode],
-  regExp: new RegExp(`^<iframe\\s+${IFRAME_ATTRS}>(?:<\\/iframe>)?$`),
-  replace: (parent, _children, match) => {
-    const src = /\bsrc="([^"]*)"/.exec(match[1])?.[1] ?? "";
-    const srcdoc = /\bsrcdoc="([^"]*)"/.exec(match[1])?.[1] ?? "";
-    if (!src && !srcdoc) return false;
-    const title = /\btitle="([^"]*)"/.exec(match[1])?.[1] ?? "";
-    parent.replace(
-      $createEmbedNode("iframe", src, "", title, unescapeAttr(srcdoc)),
+  regExpStart: /^(`{3,})cadence-html\s*$/,
+  replace: () => false,
+  handleImportAfterStartMatch: ({
+    lines,
+    startLineIndex,
+    startMatch,
+    rootNode,
+  }) => {
+    const closing = new RegExp("^`{" + startMatch[1].length + ",}\\s*$");
+    let end = startLineIndex + 1;
+    while (end < lines.length && !closing.test(lines[end])) end++;
+    if (end === lines.length) return null;
+    rootNode.append(
+      $createEmbedNode(
+        "iframe",
+        "",
+        "",
+        "",
+        lines.slice(startLineIndex + 1, end).join("\n"),
+      ),
     );
+    return [true, end];
   },
   export: (node) => {
     if (!$isEmbedNode(node) || node.getKind() !== "iframe") return null;
-    const title = node.getTitle();
-    const srcdoc = node.getSrcdoc();
-    if (srcdoc)
-      return `<iframe srcdoc="${escapeAttr(srcdoc)}"${title ? ` title="${title}"` : ""}></iframe>`;
-    return `<iframe src="${node.getSrc()}"${title ? ` title="${title}"` : ""}></iframe>`;
+    const html = node.getSrcdoc();
+    const longest = Math.max(
+      2,
+      ...Array.from(html.matchAll(/`+/g), (match) => match[0].length),
+    );
+    const fence = "`".repeat(longest + 1);
+    return `${fence}cadence-html\n${html}\n${fence}`;
   },
 };
 
-/**
- * `<video src="…" controls>` on its own line. Dropped video files land as
- * attachments and preview here with native controls.
- */
+function escapeAttribute(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+}
+function decodeAttribute(value: string) {
+  return value.replace(
+    /&(amp|quot|apos|lt|gt|#\d+|#x[0-9a-f]+);/gi,
+    (entity, name: string) => {
+      const named: Record<string, string> = {
+        amp: "&",
+        quot: '"',
+        apos: "'",
+        lt: "<",
+        gt: ">",
+      };
+      if (name[0] !== "#") return named[name.toLowerCase()] ?? entity;
+      const point =
+        name[1].toLowerCase() === "x"
+          ? parseInt(name.slice(2), 16)
+          : Number(name.slice(1));
+      return point > 0 &&
+        point <= 0x10ffff &&
+        !(point >= 0xd800 && point <= 0xdfff)
+        ? String.fromCodePoint(point)
+        : "�";
+    },
+  );
+}
+
+const VIDEO_PATTERN = /^<video\s+((?:"[^"]*"|'[^']*'|[^>])*)>(?:<\/video>)?$/;
+// A single parser gates rich mode and creates the node. Unsupported HTML
+// remains in source mode rather than silently losing attributes on save.
+export function parseVideo(
+  line: string,
+): { src: string; title: string } | null {
+  const match = VIDEO_PATTERN.exec(line);
+  if (!match) return null;
+  let rest = match[1];
+  const attributes = new Map<string, string>();
+  while (rest.trim()) {
+    const attribute =
+      /^\s*([a-z][a-z0-9-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?(?=\s|$)/i.exec(
+        rest,
+      );
+    if (!attribute) return null;
+    const name = attribute[1].toLowerCase();
+    if (!["src", "title", "controls"].includes(name) || attributes.has(name))
+      return null;
+    attributes.set(
+      name,
+      decodeAttribute(attribute[2] ?? attribute[3] ?? attribute[4] ?? ""),
+    );
+    rest = rest.slice(attribute[0].length);
+  }
+  const src = attributes.get("src");
+  return src ? { src, title: attributes.get("title") ?? "" } : null;
+}
+
 export const VIDEO: ElementTransformer = {
   type: "element",
   dependencies: [EmbedNode],
-  regExp: new RegExp(`^<video\\s+${IFRAME_ATTRS}>(?:<\\/video>)?$`),
+  regExp: VIDEO_PATTERN,
   replace: (parent, _children, match) => {
-    const src = /\bsrc="([^"]*)"/.exec(match[1])?.[1] ?? "";
-    if (!src) return false;
-    const title = /\btitle="([^"]*)"/.exec(match[1])?.[1] ?? "";
-    parent.replace($createEmbedNode("video", src, "", title));
+    const parsed = parseVideo(match[0]);
+    if (!parsed) return false;
+    parent.replace($createEmbedNode("video", parsed.src, "", parsed.title));
   },
   export: (node) => {
     if (!$isEmbedNode(node) || node.getKind() !== "video") return null;
     const title = node.getTitle();
-    return `<video src="${node.getSrc()}" controls${title ? ` title="${title}"` : ""}></video>`;
+    return `<video src="${escapeAttribute(node.getSrc())}" controls${title ? ` title="${escapeAttribute(title)}"` : ""}></video>`;
   },
 };
 
-/**
- * The workspace the editor is showing, used to resolve relative attachment
- * paths. Set once per DocumentEditor.
- */
-export const embedContext: { taskId: string } = { taskId: "" };
+export const EmbedTaskContext = createContext("");
 
-export function attachmentUrl(src: string): string {
-  if (/^(?:https?:|data:|blob:|\/)/i.test(src)) return src;
-  return `/api/tasks/${embedContext.taskId}/attachments/${encodeURIComponent(src)}`;
+export function attachmentUrl(src: string, taskId: string): string {
+  const name = /^(?:\.\/)?assets\/([^/]+)$/.exec(src)?.[1];
+  return name
+    ? `/api/tasks/${encodeURIComponent(taskId)}/attachments/${encodeURIComponent(name)}`
+    : src;
 }
 
 // Rendered by Lexical's decorator mechanism. The iframe gets a sandbox and,
@@ -295,6 +358,7 @@ function EmbedComponent({
   nodeKey: NodeKey;
 }) {
   const [editor] = useLexicalComposerContext();
+  const taskId = useContext(EmbedTaskContext);
   const [selected, setSelected, clearSelection] =
     useLexicalNodeSelection(nodeKey);
   return (
@@ -307,13 +371,18 @@ function EmbedComponent({
       }}
     >
       {kind === "image" ? (
-        <img src={attachmentUrl(src)} alt={alt} title={title} draggable={false} />
+        <img
+          src={attachmentUrl(src, taskId)}
+          alt={alt}
+          title={title}
+          draggable={false}
+        />
       ) : kind === "video" ? (
         <>
           <video
             controls
             preload="metadata"
-            src={attachmentUrl(src)}
+            src={attachmentUrl(src, taskId)}
             title={title || undefined}
           />
           {editor.isEditable() && !selected && (
@@ -323,16 +392,11 @@ function EmbedComponent({
       ) : (
         <>
           <iframe
-            src={src || undefined}
-            srcDoc={srcdoc || undefined}
+            srcDoc={srcdoc}
             title={title || "Embedded content"}
             // Inline HTML runs without same-origin so its scripts stay in
             // an opaque origin and cannot reach the app.
-            sandbox={
-              srcdoc
-                ? "allow-scripts allow-popups allow-top-navigation-by-user-activation"
-                : "allow-scripts allow-same-origin allow-popups allow-top-navigation-by-user-activation"
-            }
+            sandbox="allow-scripts allow-popups allow-top-navigation-by-user-activation"
             allowFullScreen
             loading="lazy"
             referrerPolicy="no-referrer"

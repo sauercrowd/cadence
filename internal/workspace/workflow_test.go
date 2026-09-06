@@ -228,3 +228,26 @@ func TestWorkspaceLogoPathPersists(t *testing.T) {
 		t.Fatalf("logo path did not persist: %+v", second.Info())
 	}
 }
+
+func TestWorkspaceLogoRejectsSymlinkEscapes(t *testing.T) {
+	root, outside := t.TempDir(), t.TempDir()
+	store, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(outside, "logo.png"), []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(root, "assets")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(outside, "logo.png"), filepath.Join(root, "logo.png")); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"assets/logo.png", "logo.png"} {
+		store.info.LogoPath = path
+		if _, _, err := store.WorkspaceLogo(); !errors.Is(err, ErrNotFound) {
+			t.Fatalf("expected symlink escape rejection for %q, got %v", path, err)
+		}
+	}
+}

@@ -94,3 +94,27 @@ test("keeps both versions after a revision conflict", async () => {
     status: "conflict",
   });
 });
+
+test("upload completion preserves newer edits and saves without a mounted editor", async () => {
+  const session = new DocumentSession("upload", "task", "doc");
+  await session.load();
+  const marker = "cadence-upload:1234-abcd";
+  session.edit(`Before\n\n[Uploading x](${marker})\n\nAfter`);
+  session.edit(`Edited before\n\n[Uploading x](${marker})\n\nEdited after`);
+  const expected = "Edited before\n\n![](assets/x.png)\n\nEdited after";
+  vi.mocked(api.saveDocument).mockResolvedValue(document(expected, "r2"));
+  session.completeUpload(marker, "![](assets/x.png)");
+  await session.flush();
+  expect(api.saveDocument).toHaveBeenCalledWith("task", "doc", expected, "r1");
+  expect(session.snapshot().generation).toBe(1);
+  session.completeUpload(marker, "duplicate");
+  expect(session.snapshot().content).toBe(expected);
+});
+
+test("upload completion does not resurrect a deleted insertion marker", async () => {
+  const session = new DocumentSession("deleted-upload", "task", "doc");
+  await session.load();
+  session.completeUpload("cadence-upload:1234", "![](assets/x.png)");
+  expect(session.snapshot().content).toBe("base");
+  expect(session.snapshot().generation).toBe(0);
+});

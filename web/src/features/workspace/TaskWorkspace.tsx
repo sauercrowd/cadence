@@ -316,6 +316,9 @@ export function TaskWorkspace({
                 showInstructions={!!phase}
                 taskId={task.id}
                 onChange={(content) => session.edit(content)}
+                onUploadComplete={(marker, markdown) =>
+                  session.completeUpload(marker, markdown)
+                }
                 onError={onError}
               />
             ) : (

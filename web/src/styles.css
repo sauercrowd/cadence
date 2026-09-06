@@ -42,7 +42,6 @@
 
   /* --- geometry ------------------------------------------------------ */
   --r: 2px;
-  --r-logo: 5px;
   --row: 26px;
   --ctl-h: 22px;
   --ctl-pad: 3px 7px;
@@ -152,9 +151,9 @@ kbd {
   transform: translateY(-50%);
   z-index: 2;
   padding: 0 3px;
-  border-color: var(--signal);
-  background: var(--signal-soft);
-  color: var(--signal);
+  border-color: var(--structure);
+  background: var(--structure-soft);
+  color: var(--structure);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -381,7 +380,7 @@ pre {
   width: 17px;
   height: 17px;
   flex-shrink: 0;
-  border-radius: var(--r-logo);
+  border-radius: var(--r);
   object-fit: contain;
 }
 .sidebar-new {
@@ -1672,9 +1671,9 @@ body[data-keys="on"] .task-row.cursor::after {
   margin: 0;
 }
 .shortcut-sheet dd kbd {
-  border-color: var(--signal);
-  background: var(--signal-soft);
-  color: var(--signal);
+  border-color: var(--structure);
+  background: var(--structure-soft);
+  color: var(--structure);
   font-size: 10px;
 }
 .shortcut-foot {

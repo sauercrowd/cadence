@@ -20,7 +20,7 @@ import {
   HorizontalRuleNode,
 } from "@lexical/react/LexicalHorizontalRuleNode";
 import type { ElementTransformer } from "@lexical/markdown";
-import { IMAGE, VIDEO, IFRAME } from "./embeds";
+import { IMAGE, VIDEO, HTML_EMBED, parseVideo } from "./embeds";
 
 function cells(line: string): string[] {
   return line
@@ -122,29 +122,29 @@ export const markdownTransformers = [
   RULE,
   IMAGE,
   VIDEO,
-  IFRAME,
+  HTML_EMBED,
   CHECK_LIST,
   ...TRANSFORMERS,
 ];
 
-// Constructs the rich editor can round-trip itself: images, videos and
-// iframes get real nodes, so they no longer push a document into
-// source-only mode. The tag branches tolerate `>` inside quoted values,
-// like the transformers.
-const richConstructs =
-  /^!\[(?:\\.|[^\]])*\]\(\S+?(?:\s+"[^"]*")?\)$|^<(?:iframe|video)\s+(?:"[^"]*"|'[^']*'|[^>])*>(?:<\/(?:iframe|video)>)?$/;
+// Images and videos are supported outside code fences. Raw HTML stays in source mode.
+const richConstructs = /^!\[(?:\\.|[^\]])*\]\(\S+?(?:\s+"[^"]*")?\)$/;
 
 export function sourceOnlyReason(markdown: string): string | null {
-  let fence = false;
+  let fence = 0;
   for (const line of markdown.split("\n")) {
-    if (/^\s*~{3,}/.test(line))
+    if (!fence && /^\s*~{3,}/.test(line))
       return "Tilde code fences are preserved in source mode.";
-    if (/^\s*`{3,}/.test(line)) {
-      fence = !fence;
+    if (fence) {
+      if (new RegExp("^\\s*`{" + fence + ",}\\s*$").test(line)) fence = 0;
       continue;
     }
-    if (fence) continue;
-    if (richConstructs.test(line.trim())) continue;
+    const opening = /^\s*(`{3,})/.exec(line);
+    if (opening) {
+      fence = opening[1].length;
+      continue;
+    }
+    if (richConstructs.test(line.trim()) || parseVideo(line.trim())) continue;
     if (
       /!\[|^\s*<[^>]+>|\[\^[^\]]+\]|^\s*\[[^\]]+\]:|^ {4}\S/.test(line) &&
       !/^\s*[-*+] /.test(line)

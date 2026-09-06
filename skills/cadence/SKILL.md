@@ -84,24 +84,23 @@ unreadable until repaired:
 
 A document file is Markdown body first, machine sections after:
 
-```md
+````md
 # Title
 
-Body text. Images and videos referenced by bare name:
-![alt](3f9a….png) and <video src="7c1d….mp4" controls></video>
+Body text. Images and videos referenced by relative path:
+![alt](assets/3f9a….png) and <video src="assets/7c1d….mp4" controls></video>
 
 <agent-instructions>
 Prompt text for the agent working this phase.
 </agent-instructions>
-<comments>
+```cadence-comments
 {"version": 2, "threads": [ … ]}
-</comments>
 ```
+````
 
 - `<agent-instructions>` must be unindented, unfenced, tags on their own
   lines. It may sit anywhere; inner text is the prompt verbatim.
-- `<comments>` must be the trailing block, same shape (unindented,
-  unfenced). Each thread:
+- `cadence-comments` must be the trailing block, an unindented fenced code block containing JSON. Each thread:
   `{ "id", "status": "open" | "resolved", "anchor": { "version": 1,
   "start", "end", "quote", "prefix", "suffix" }, "messages": [{ "id",
   "author", "body", "createdAt" }], "createdAt", "updatedAt" }`.
@@ -112,14 +111,15 @@ Prompt text for the agent working this phase.
   Never hand-edit the envelope unless you can keep the JSON valid —
   corruption forces the document into a manual repair mode.
 - The rich editor round-trips headings, emphasis, links, lists,
-  checklists, tables, code fences, rules, images, videos, and single-line
-  `<iframe>` embeds. Anything else (other raw HTML, footnotes, reference
+  checklists, tables, code fences, rules, images, videos, and `cadence-html` fenced blocks rendered as sandboxed
+  HTML embeds. Ordinary `html` fences display code. Raw `<iframe>` tags
+  stay in source mode. Anything else (other raw HTML, footnotes, reference
   links) is source-only: still editable, but only as raw text.
 
 ## Attachments
 
 Files live in `tasks/<id>/assets/<uuid>.<ext>` and are referenced from
-Markdown by bare stored name. Images (`png jpg gif webp svg`) and videos
+Markdown as `assets/<uuid>.<ext>`. Images (`png jpg gif webp svg`) and videos
 (`mp4 webm ogv`) preview inline; everything else serves as a download.
 Never reference absolute paths — documents must stay portable.
 

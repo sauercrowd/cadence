@@ -12,7 +12,8 @@ import {
   $convertToMarkdownString,
 } from "@lexical/markdown";
 import { markdownTransformers, sourceOnlyReason } from "./markdown";
-import { EmbedNode, attachmentUrl, embedContext } from "./embeds";
+import { EmbedNode, attachmentUrl, parseVideo } from "./embeds";
+import { $getRoot } from "lexical";
 import { projection, selectRange } from "./anchors";
 
 describe("Lexical Markdown adapter", () => {
@@ -38,6 +39,7 @@ describe("Lexical Markdown adapter", () => {
     });
     let output = "",
       text = "";
+    let embeds: string[] = [];
     editor.update(
       () => {
         $convertFromMarkdownString(source, markdownTransformers);
@@ -45,12 +47,16 @@ describe("Lexical Markdown adapter", () => {
           const range = selectRange(0, 5);
           if (range) $wrapSelectionInMarkNode(range, false, "thread");
         }
+        embeds = $getRoot()
+          .getChildren()
+          .filter((node) => node instanceof EmbedNode)
+          .map((node) => (node as EmbedNode).getSrcdoc());
         text = projection().text;
         output = $convertToMarkdownString(markdownTransformers);
       },
       { discrete: true },
     );
-    return { output, text };
+    return { output, text, embeds };
   }
   it("round-trips headings, inline formats, lists, checklists and code", () => {
     const source =
@@ -72,9 +78,9 @@ describe("Lexical Markdown adapter", () => {
   it("serializes comment marks as ordinary text", () => {
     expect(convert("Hello world", true).output).toBe("Hello world");
   });
-  it("round-trips images, titled images and iframe embeds", () => {
+  it("round-trips images and titled images", () => {
     const source =
-      '![Diagram](assets/abc123.png)\n\n![Alt \\] text](https://example.com/pic.jpg "A title")\n\n<iframe src="https://example.com/embed" title="Demo"></iframe>';
+      '![Diagram](assets/abc123.png)\n\n![Alt \\] text](https://example.com/pic.jpg "A title")';
     const one = convert(source),
       two = convert(one.output);
     expect(one.output).toBe(source);
@@ -88,33 +94,59 @@ describe("Lexical Markdown adapter", () => {
     expect(one.output).toBe(source);
     expect(two.output).toBe(source);
   });
-  it("round-trips inline HTML iframes with quotes and markup inside", () => {
-    const source =
-      '<iframe srcdoc="<p>Hello &quot;world&quot; &amp; friends</p>" title="Note"></iframe>';
-    const one = convert(source),
-      two = convert(one.output);
+  it("round-trips multiline HTML with quotes, blank lines and nested backticks", () => {
+    const html =
+      '<style>p { color: navy; }</style>\n\n<p title="hi">Hello &amp; friends</p>\n<script>const x = `value`;</script>\n```\n~~~';
+    const source = "````cadence-html\n" + html + "\n````";
+    const one = convert(source);
+    expect(one.embeds).toEqual([html]);
     expect(one.output).toBe(source);
-    expect(two.output).toBe(source);
+    expect(convert(one.output).embeds).toEqual([html]);
+    expect(sourceOnlyReason(source)).toBeNull();
   });
-  it("keeps images and iframes out of source-only mode", () => {
+  it("leaves ordinary HTML fences as code and raw iframes in source mode", () => {
+    expect(convert("```html\n<p>Example</p>\n```").embeds).toEqual([]);
+    expect(convert("```cadence-html\n<p>Unclosed</p>").embeds).toEqual([]);
+    for (const tag of [
+      "<iframe src='https://example.com'></iframe>",
+      '<iframe srcdoc="<p>Hi</p>"></iframe>',
+    ]) {
+      expect(sourceOnlyReason(tag)).toContain("source mode");
+    }
     expect(
       sourceOnlyReason(
-        '# Title\n\n![Diagram](assets/abc123.png)\n\n<iframe src="https://example.com/embed"></iframe>\n\n<iframe srcdoc="<p>Hi</p>"></iframe>\n\n<video src="assets/clip.mp4" controls></video>',
+        '![Diagram](assets/a.png)\n\n<video src="assets/a.mp4" controls></video>',
       ),
     ).toBeNull();
-    expect(sourceOnlyReason("# Title\n\n<audio src=\"clip.mp3\">")).toContain(
-      "source mode",
-    );
-    expect(sourceOnlyReason("# Title\n\n![a](b) trailing")).toContain(
-      "source mode",
-    );
+  });
+  it("parses single, double and unquoted video attributes without losing entities", () => {
+    for (const source of [
+      `<video src='assets/clip.mp4' title='A &quot;quote&quot; &amp; &#39;apostrophe&#39;'></video>`,
+      `<video src = assets/clip.mp4 title="A &quot;quote&quot; &amp; &#x27;apostrophe&#x27;" controls></video>`,
+    ]) {
+      expect(sourceOnlyReason(source)).toBeNull();
+      expect(parseVideo(source)).toEqual({
+        src: "assets/clip.mp4",
+        title: `A "quote" & 'apostrophe'`,
+      });
+      const normalized = convert(source).output;
+      expect(parseVideo(normalized)).toEqual(parseVideo(source));
+      expect(convert(normalized).output).toBe(normalized);
+    }
+    for (const source of [
+      "<video controls></video>",
+      "<video data-src='x.mp4'></video>",
+      "<video src='x.mp4' poster='x.png'></video>",
+      "<video title=\"src='fake.mp4'\"></video>",
+    ]) {
+      expect(sourceOnlyReason(source)).toContain("source mode");
+    }
   });
   it("resolves relative attachment paths against the current task", () => {
-    embedContext.taskId = "task-1";
-    expect(attachmentUrl("assets/abc123.png")).toBe(
-      "/api/tasks/task-1/attachments/assets%2Fabc123.png",
+    expect(attachmentUrl("assets/abc123.png", "task-1")).toBe(
+      "/api/tasks/task-1/attachments/abc123.png",
     );
-    expect(attachmentUrl("https://example.com/pic.jpg")).toBe(
+    expect(attachmentUrl("https://example.com/pic.jpg", "task-1")).toBe(
       "https://example.com/pic.jpg",
     );
   });

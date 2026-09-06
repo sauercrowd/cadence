@@ -127,7 +127,7 @@ export const api = {
       body: file,
     });
     if (!response.ok)
-      throw new Error(`Could not save the image (${response.status}).`);
+      throw new Error(`Could not save the attachment (${response.status}).`);
     return (await response.json()) as { name: string };
   },
   workflow: () => workspaceClient.getWorkflow({}),
