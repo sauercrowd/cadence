@@ -18,6 +18,8 @@ import { TaskOverview, statusLabels, StatusIcon } from "./features/tasks/TaskOve
 import { TaskWorkspace } from "./features/workspace/TaskWorkspace";
 import { WorkflowSettings } from "./features/workflows/WorkflowSettings";
 import { Modal } from "./ui/Modal";
+import { KeyHint, useHintMode, useShortcut } from "./app/keys";
+import { ShortcutSheet } from "./features/shortcuts/ShortcutSheet";
 import { PropertyPopup, flattenFields } from "./ui/PropertyMenu";
 import { priorityField, statusField } from "./features/tasks/propertyFields";
 
@@ -26,7 +28,9 @@ import { TaskSwitcher } from "./features/tasks/TaskSwitcher";
 import { hasUnsavedDocuments } from "./documents/session";
 export default function App() {
   const route = useRoute();
-  const [workspace, setWorkspace] = useState<{ id: string; name: string }>(),
+  const [workspace, setWorkspace] =
+    useState<{ id: string; name: string; logoPath: string }>(),
+    [logoBroken, setLogoBroken] = useState(false),
     [tasks, setTasks] = useState<Task[]>([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
@@ -37,6 +41,7 @@ export default function App() {
     [priority, setPriority] = useState(2),
     [status, setStatus] = useState<Status>("open"),
     [propertyOpen, setPropertyOpen] = useState(false),
+    [sheet, setSheet] = useState(false),
     [busy, setBusy] = useState(false);
   const latestFetch = useRef(0),
     lastOverview = useRef("/tasks");
@@ -60,7 +65,13 @@ export default function App() {
     }
   }, []);
   useEffect(() => {
-    void api.workspace().then(setWorkspace).catch(onError);
+    void api
+      .workspace()
+      .then((info) => {
+        setLogoBroken(false);
+        setWorkspace(info);
+      })
+      .catch(onError);
     void refresh();
     const focus = () => void refresh();
     window.addEventListener("focus", focus);
@@ -74,54 +85,26 @@ export default function App() {
       lastOverview.current = route.pathname + route.search;
   }, [route]);
   useEffect(() => {
-    const key = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement;
-      if (
-        event.ctrlKey ||
-        event.metaKey ||
-        event.altKey ||
-        event.isComposing ||
-        event.repeat ||
-        target.isContentEditable ||
-        ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) ||
-        document.querySelector("dialog[open]")
-      )
-        return;
-      if (event.key.toLowerCase() === "g") {
-        event.preventDefault();
-        setSwitching(true);
-      }
-      if (event.key.toLowerCase() === "t") {
-        event.preventDefault();
-        navigate(lastOverview.current);
-      }
-      if (event.key === "c") {
-        event.preventDefault();
-        setName("");
-        setPriority(2);
-        setStatus("open");
-        setCreating(true);
-      }
-      if (event.key === "/") {
-        event.preventDefault();
-        document
-          .querySelector<HTMLInputElement>('[aria-label="Filter tasks"]')
-          ?.focus();
-      }
-    };
     const unload = (event: BeforeUnloadEvent) => {
       if (hasUnsavedDocuments()) {
         event.preventDefault();
         event.returnValue = "";
       }
     };
-    document.addEventListener("keydown", key);
     window.addEventListener("beforeunload", unload);
-    return () => {
-      document.removeEventListener("keydown", key);
-      window.removeEventListener("beforeunload", unload);
-    };
+    return () => window.removeEventListener("beforeunload", unload);
   }, []);
+  useHintMode();
+  useShortcut("go-to-task", () => setSwitching(true));
+  useShortcut("tasks", () => navigate(lastOverview.current));
+  useShortcut("phases", () => navigate("/settings/workflow"));
+  useShortcut("shortcuts", () => setSheet(true));
+  useShortcut("new-task", () => create());
+  useShortcut("filter", () =>
+    document
+      .querySelector<HTMLInputElement>('[aria-label="Filter tasks"]')
+      ?.focus(),
+  );
   const onTask = useCallback(
     (task: Task) =>
       setTasks((current) =>
@@ -150,14 +133,24 @@ export default function App() {
     <div className="app-shell">
       <aside className="app-sidebar">
         <div className="workspace-label" title={workspace?.name}>
-          <span className="workspace-avatar">
-            {workspace?.name.slice(0, 1).toUpperCase() || "C"}
-          </span>
+          {workspace?.logoPath && !logoBroken ? (
+            <img
+              className="workspace-logo"
+              src="/api/workspace/logo"
+              alt=""
+              onError={() => setLogoBroken(true)}
+            />
+          ) : (
+            <span className="workspace-avatar">
+              {workspace?.name.slice(0, 1).toUpperCase() || "C"}
+            </span>
+          )}
           <span>{workspace?.name || "Workspace"}</span>
         </div>
         <button className="sidebar-new" onClick={create}>
           <Plus size={14} />
-          New task<kbd>C</kbd>
+          New task
+          <KeyHint id="new-task" />
         </button>
         <nav aria-label="Main navigation">
           <button
@@ -167,6 +160,7 @@ export default function App() {
           >
             <Layers2 size={16} />
             Tasks
+            <KeyHint id="tasks" />
           </button>
           <button
             className={route.pathname === "/settings/workflow" ? "active" : ""}
@@ -174,6 +168,7 @@ export default function App() {
           >
             <Settings2 size={15} />
             Phases
+            <KeyHint id="phases" />
           </button>
         </nav>
         <div className="sidebar-label settings-label">FOCUS</div>
@@ -205,6 +200,14 @@ export default function App() {
             <p className="focus-empty">Tasks in Focus appear here.</p>
           )}
         </nav>
+        <button
+          className="sidebar-keys"
+          title="Hold Alt to show shortcut keys"
+          onClick={() => setSheet(true)}
+        >
+          <kbd>?</kbd>
+          Shortcuts
+        </button>
       </aside>
       <main className="app-main">
         {error && (
@@ -256,12 +259,10 @@ export default function App() {
             route={route}
             onOpen={openTask}
             onCreate={create}
-            onRestore={(task) => {
-              void api.restore(task).then(onTask).catch(onError);
-            }}
           />
         )}
       </main>
+      {sheet && <ShortcutSheet onClose={() => setSheet(false)} />}
       {switching && (
         <TaskSwitcher
           tasks={tasks}

@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   $createParagraphNode,
+  $createTextNode,
   $getSelection,
+  $getNodeByKey,
+  $nodesOfType,
+  $isTextNode,
   $isRangeSelection,
   $getRoot,
   $setSelection,
+  COMMAND_PRIORITY_HIGH,
   FORMAT_TEXT_COMMAND,
   UNDO_COMMAND,
   REDO_COMMAND,
@@ -16,7 +21,11 @@ import {
 import { LexicalExtensionComposer } from "@lexical/react/LexicalExtensionComposer";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { RichTextExtension, $createHeadingNode } from "@lexical/rich-text";
+import {
+  RichTextExtension,
+  $createHeadingNode,
+  DRAG_DROP_PASTE,
+} from "@lexical/rich-text";
 import { HistoryExtension } from "@lexical/history";
 import {
   ListExtension,
@@ -24,7 +33,13 @@ import {
   INSERT_UNORDERED_LIST_COMMAND,
   INSERT_CHECK_LIST_COMMAND,
 } from "@lexical/list";
-import { LinkExtension, TOGGLE_LINK_COMMAND } from "@lexical/link";
+import {
+  LinkExtension,
+  TOGGLE_LINK_COMMAND,
+  LinkNode,
+  $createLinkNode,
+  $isLinkNode,
+} from "@lexical/link";
 import { TableExtension, INSERT_TABLE_COMMAND } from "@lexical/table";
 import { CodeNode, $createCodeNode } from "@lexical/code";
 import {
@@ -68,14 +83,24 @@ import {
   anchorRect,
 } from "./anchors";
 import { markdownTransformers, sourceOnlyReason } from "./markdown";
+import {
+  EmbedNode,
+  $createEmbedNode,
+  EmbedTaskContext,
+  attachmentUrl,
+} from "./embeds";
 import { ThreadOverlay } from "./ThreadOverlay";
 import { SourceEditor } from "./SourceEditor";
+import { api } from "../../data/api";
 
 type Props = {
   content: string;
   onChange: (content: string) => void;
+  onError?: (error: unknown) => void;
+  onUploadComplete?: (marker: string, markdown: string) => void;
   cacheKey?: string;
   showInstructions?: boolean;
+  taskId?: string;
 };
 const editorCache = new Map<string, { content: string; state: EditorState }>();
 const theme = {
@@ -106,8 +131,11 @@ const theme = {
 export function DocumentEditor({
   content,
   onChange,
+  onError,
+  onUploadComplete,
   cacheKey,
   showInstructions = true,
+  taskId = "",
 }: Props) {
   const parsed = useMemo(() => parseFile(content), []);
   const [mode, setMode] = useState<"spec" | "instructions" | "source">(
@@ -126,64 +154,75 @@ export function DocumentEditor({
   const current = parseFile(latest.current);
   const reason = current.error || sourceOnlyReason(current.body);
   return (
-    <div className="document-editor">
-      <div className="editor-mode">
-        <div className="segmented">
-          <button
-            className={mode === "spec" ? "selected" : ""}
-            disabled={!!reason}
-            onClick={() => go("spec")}
-          >
-            Spec
-          </button>
-          {showInstructions && (
+    <EmbedTaskContext.Provider value={taskId}>
+      <div className="document-editor">
+        <div className="editor-mode">
+          <div className="segmented">
             <button
-              className={mode === "instructions" ? "selected" : ""}
+              className={mode === "spec" ? "selected" : ""}
               disabled={!!reason}
-              onClick={() => go("instructions")}
+              onClick={() => go("spec")}
             >
-              Agent instructions
+              Spec
             </button>
-          )}
-          <button
-            className={mode === "source" ? "selected" : ""}
-            onClick={() => go("source")}
-          >
-            Source
-          </button>
+            {showInstructions && (
+              <button
+                className={mode === "instructions" ? "selected" : ""}
+                disabled={!!reason}
+                onClick={() => go("instructions")}
+              >
+                Agent instructions
+              </button>
+            )}
+            <button
+              className={mode === "source" ? "selected" : ""}
+              onClick={() => go("source")}
+            >
+              Source
+            </button>
+          </div>
         </div>
-        <span className="muted small">Markdown document</span>
+        {reason && <div className="notice">{reason}</div>}
+        {mode === "source" ? (
+          <SourceEditor
+            key={`source-${generation}`}
+            value={latest.current}
+            label={current.error ? "File source for repair" : "Markdown source"}
+            onChange={(value) => update(value)}
+          />
+        ) : mode === "instructions" ? (
+          <SourceEditor
+            key={`instructions-${generation}`}
+            value={current.agentPrompt}
+            label="Agent instructions"
+            onChange={(value) =>
+              update(serializeFile(current.body, current.threads, value))
+            }
+          />
+        ) : (
+          <RichEditor
+            key={`rich-${generation}`}
+            content={latest.current}
+            onChange={update}
+            onError={onError}
+            onUploadComplete={onUploadComplete}
+            cacheKey={cacheKey}
+            taskId={taskId}
+          />
+        )}
       </div>
-      {reason && <div className="notice">{reason}</div>}
-      {mode === "source" ? (
-        <SourceEditor
-          key={`source-${generation}`}
-          value={latest.current}
-          label={current.error ? "File source for repair" : "Markdown source"}
-          onChange={(value) => update(value)}
-        />
-      ) : mode === "instructions" ? (
-        <SourceEditor
-          key={`instructions-${generation}`}
-          value={current.agentPrompt}
-          label="Agent instructions"
-          onChange={(value) =>
-            update(serializeFile(current.body, current.threads, value))
-          }
-        />
-      ) : (
-        <RichEditor
-          key={`rich-${generation}`}
-          content={latest.current}
-          onChange={update}
-          cacheKey={cacheKey}
-        />
-      )}
-    </div>
+    </EmbedTaskContext.Provider>
   );
 }
 
-function RichEditor({ content, onChange, cacheKey }: Props) {
+function RichEditor({
+  content,
+  onChange,
+  onError,
+  onUploadComplete,
+  cacheKey,
+  taskId,
+}: Props) {
   const initial = useMemo(() => parseFile(content), []);
   const extension = useMemo(() => {
     const cached = cacheKey ? editorCache.get(cacheKey) : undefined;
@@ -203,7 +242,7 @@ function RichEditor({ content, onChange, cacheKey }: Props) {
           hasCellBackgroundColor: false,
         }),
       ],
-      nodes: [CodeNode, HorizontalRuleNode],
+      nodes: [CodeNode, HorizontalRuleNode, EmbedNode],
       $initialEditorState:
         cached?.content === content
           ? cached.state.clone()
@@ -222,7 +261,10 @@ function RichEditor({ content, onChange, cacheKey }: Props) {
         initial={initial}
         content={content}
         cacheKey={cacheKey}
+        taskId={taskId}
         onChange={onChange}
+        onError={onError}
+        onUploadComplete={onUploadComplete}
       />
     </LexicalExtensionComposer>
   );
@@ -231,16 +273,18 @@ function RichEditor({ content, onChange, cacheKey }: Props) {
 function EditorSurface({
   initial,
   onChange,
+  onError,
+  onUploadComplete,
   content,
   cacheKey,
+  taskId = "",
 }: Props & { initial: ReturnType<typeof parseFile> }) {
   const [editor] = useLexicalComposerContext();
   const [threads, setThreads] = useState(initial.threads),
     [draft, setDraft] = useState<Thread | null>(null),
     [markers, setMarkers] = useState<
       { id: string; top: number; detached: boolean }[]
-    >([]),
-    [showResolved, setShowResolved] = useState(false);
+    >([]);
   const root = useRef<HTMLDivElement>(null),
     selection = useRef<RangeSelection | null>(null),
     body = useRef(initial.body),
@@ -262,17 +306,12 @@ function EditorSurface({
     editor.getEditorState().read(() => {
       let previous = -30;
       setMarkers(
-        data.current
-          .filter((t) => showResolved || t.status === "open")
-          .map((t) => {
-            const rect = anchorRect(t.id, (key) => editor.getElementByKey(key));
-            const top = Math.max(
-              previous + 28,
-              rect ? rect.top - bounds.top : 8,
-            );
-            previous = top;
-            return { id: t.id, top, detached: !rect };
-          }),
+        data.current.map((t) => {
+          const rect = anchorRect(t.id, (key) => editor.getElementByKey(key));
+          const top = Math.max(previous + 28, rect ? rect.top - bounds.top : 8);
+          previous = top;
+          return { id: t.id, top, detached: !rect };
+        }),
       );
     });
   }
@@ -320,6 +359,130 @@ function EditorSurface({
       nestedMarks();
     };
   }, [editor]);
+  // Keep Markdown links portable while resolving their DOM targets per task.
+  useEffect(
+    () =>
+      editor.registerMutationListener(LinkNode, (mutations) => {
+        editor.getEditorState().read(() => {
+          for (const [key, mutation] of mutations) {
+            if (mutation === "destroyed") continue;
+            const node = $getNodeByKey(key);
+            const element = editor.getElementByKey(key);
+            if ($isLinkNode(node) && element) {
+              const url = node.getURL();
+              if (/^(?:\.\/)?assets\//.test(url))
+                element.setAttribute("href", attachmentUrl(url, taskId));
+            }
+          }
+        });
+      }),
+    [editor, taskId],
+  );
+
+  // Save a unique marker immediately. Completion replaces it at its original
+  // location, either in this editor or in the owning document session.
+  useEffect(() => {
+    if (!taskId || !onUploadComplete) return;
+    let mounted = true;
+    const unregister = editor.registerCommand(
+      DRAG_DROP_PASTE,
+      (files) => {
+        if (!files.length) return false;
+        for (const file of files) {
+          const marker = `cadence-upload:${crypto.randomUUID()}`;
+          const pending = $createLinkNode(marker);
+          pending.append(
+            $createTextNode(`Uploading ${file.name.replace(/\s+/g, " ")}`),
+          );
+          const paragraph = $createParagraphNode().append(pending);
+          const selection = $getSelection();
+          if ($isRangeSelection(selection)) selection.insertNodes([paragraph]);
+          else $getRoot().append(paragraph);
+          const kind = file.type.startsWith("image/")
+            ? "image"
+            : file.type.startsWith("video/")
+              ? "video"
+              : null;
+          void api
+            .uploadAttachment(taskId, file)
+            .then(({ name }) => {
+              const src = `assets/${name}`;
+              const label = file.name
+                .replace(/\\/g, "\\\\")
+                .replace(/([\[\]])/g, "\\$1")
+                .replace(/\s+/g, " ");
+              const markdown =
+                kind === "image"
+                  ? `![](${src})`
+                  : kind === "video"
+                    ? `<video src="${src}" controls></video>`
+                    : `[${label}](${src})`;
+              if (!mounted) {
+                onUploadComplete(marker, markdown);
+                return;
+              }
+              editor.update(() => {
+                const node = $nodesOfType(LinkNode).find(
+                  (node) => node.isAttached() && node.getURL() === marker,
+                );
+
+                if (!node) return;
+                if (!kind) {
+                  node.setURL(src);
+                  const text = node.getFirstChild();
+                  if ($isTextNode(text)) {
+                    text.setTextContent(file.name);
+                    const selected = $getSelection();
+                    if ($isRangeSelection(selected)) {
+                      for (const point of [selected.anchor, selected.focus]) {
+                        if (point.key === text.getKey())
+                          point.set(
+                            point.key,
+                            Math.min(point.offset, file.name.length),
+                            "text",
+                          );
+                      }
+                    }
+                  }
+                  return;
+                }
+                // Inserting at the marker lets Lexical split any surrounding
+                // paragraph without overwriting text typed during the upload.
+                const previous = $getSelection()?.clone() ?? null;
+                node.selectStart().insertNodes([$createEmbedNode(kind, src)]);
+                node.remove();
+                if (
+                  previous &&
+                  (!$isRangeSelection(previous) ||
+                    ($getNodeByKey(previous.anchor.key)?.isAttached() &&
+                      $getNodeByKey(previous.focus.key)?.isAttached()))
+                )
+                  $setSelection(previous);
+              });
+            })
+            .catch((error) => {
+              // A failed upload becomes readable text, never a broken link.
+              const message = `Upload failed: ${file.name.replace(/[\[\]\n\r]/g, " ")}`;
+              if (!mounted) onUploadComplete(marker, message);
+              else
+                editor.update(() => {
+                  const node = $nodesOfType(LinkNode).find(
+                    (node) => node.isAttached() && node.getURL() === marker,
+                  );
+                  if (node) node.replace($createTextNode(message));
+                });
+              onError?.(error);
+            });
+        }
+        return true;
+      },
+      COMMAND_PRIORITY_HIGH,
+    );
+    return () => {
+      mounted = false;
+      unregister();
+    };
+  }, [editor, taskId]);
   useEffect(() => {
     measure();
     const observer = new ResizeObserver(measure);
@@ -329,7 +492,7 @@ function EditorSurface({
       observer.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [threads, showResolved]);
+  }, [threads]);
 
   const beginComment = () =>
     editor.getEditorState().read(() => {
@@ -564,16 +727,6 @@ function EditorSurface({
           )}
         </div>
       </div>
-      {!!threads.length && (
-        <button
-          className="text-button resolved-toggle"
-          onClick={() => setShowResolved(!showResolved)}
-        >
-          {showResolved
-            ? "Hide resolved threads"
-            : `Show all ${threads.length} threads`}
-        </button>
-      )}
     </>
   );
 }

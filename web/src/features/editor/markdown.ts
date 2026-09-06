@@ -20,6 +20,7 @@ import {
   HorizontalRuleNode,
 } from "@lexical/react/LexicalHorizontalRuleNode";
 import type { ElementTransformer } from "@lexical/markdown";
+import { IMAGE, VIDEO, HTML_EMBED, parseVideo } from "./embeds";
 
 function cells(line: string): string[] {
   return line
@@ -116,23 +117,39 @@ const RULE: ElementTransformer = {
   },
   export: (node) => ($isHorizontalRuleNode(node) ? "---" : null),
 };
-export const markdownTransformers = [TABLE, RULE, CHECK_LIST, ...TRANSFORMERS];
+export const markdownTransformers = [
+  TABLE,
+  RULE,
+  IMAGE,
+  VIDEO,
+  HTML_EMBED,
+  CHECK_LIST,
+  ...TRANSFORMERS,
+];
+
+// Images and videos are supported outside code fences. Raw HTML stays in source mode.
+const richConstructs = /^!\[(?:\\.|[^\]])*\]\(\S+?(?:\s+"[^"]*")?\)$/;
 
 export function sourceOnlyReason(markdown: string): string | null {
-  let fence = false;
+  let fence = 0;
   for (const line of markdown.split("\n")) {
-    if (/^\s*~{3,}/.test(line))
+    if (!fence && /^\s*~{3,}/.test(line))
       return "Tilde code fences are preserved in source mode.";
-    if (/^\s*`{3,}/.test(line)) {
-      fence = !fence;
+    if (fence) {
+      if (new RegExp("^\\s*`{" + fence + ",}\\s*$").test(line)) fence = 0;
       continue;
     }
-    if (fence) continue;
+    const opening = /^\s*(`{3,})/.exec(line);
+    if (opening) {
+      fence = opening[1].length;
+      continue;
+    }
+    if (richConstructs.test(line.trim()) || parseVideo(line.trim())) continue;
     if (
       /!\[|^\s*<[^>]+>|\[\^[^\]]+\]|^\s*\[[^\]]+\]:|^ {4}\S/.test(line) &&
       !/^\s*[-*+] /.test(line)
     )
-      return "This document contains Markdown that is preserved in source mode (HTML, images, references, or indented blocks).";
+      return "This document contains Markdown that is preserved in source mode (HTML, references, or indented blocks).";
   }
   return null;
 }

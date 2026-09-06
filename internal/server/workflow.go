@@ -64,7 +64,7 @@ func workflowProto(w workspace.Workflow) *v1.Workflow {
 
 func (h *Handler) GetWorkspace(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.WorkspaceInfo], error) {
 	info := h.store.Info()
-	return connect.NewResponse(&v1.WorkspaceInfo{Id: info.ID, Name: info.Name}), nil
+	return connect.NewResponse(&v1.WorkspaceInfo{Id: info.ID, Name: info.Name, LogoPath: info.LogoPath}), nil
 }
 func (h *Handler) GetTask(_ context.Context, r *connect.Request[v1.TaskRequest]) (*connect.Response[v1.Task], error) {
 	t, e := h.store.GetTask(r.Msg.TaskId)
@@ -83,20 +83,6 @@ func (h *Handler) UpdateTask(_ context.Context, r *connect.Request[v1.UpdateTask
 	}
 	u := workspace.TaskUpdate{Name: r.Msg.Name, Status: statusString(r.Msg.Status), Priority: int(r.Msg.Priority), AgentStatus: activity, CurrentPhaseID: r.Msg.CurrentPhaseId, Fields: r.Msg.GetUpdateMask().GetPaths()}
 	t, e := h.store.UpdateTask(r.Msg.Id, r.Msg.Revision, u)
-	if e != nil {
-		return nil, rpcError(e)
-	}
-	return connect.NewResponse(taskToProto(t)), nil
-}
-func (h *Handler) ArchiveTask(_ context.Context, r *connect.Request[v1.RevisionTaskRequest]) (*connect.Response[v1.Task], error) {
-	t, e := h.store.UpdateTask(r.Msg.Id, r.Msg.Revision, workspace.TaskUpdate{Status: "archived", Fields: []string{"status"}})
-	if e != nil {
-		return nil, rpcError(e)
-	}
-	return connect.NewResponse(taskToProto(t)), nil
-}
-func (h *Handler) RestoreTask(_ context.Context, r *connect.Request[v1.RevisionTaskRequest]) (*connect.Response[v1.Task], error) {
-	t, e := h.store.RestoreTask(r.Msg.Id, r.Msg.Revision)
 	if e != nil {
 		return nil, rpcError(e)
 	}

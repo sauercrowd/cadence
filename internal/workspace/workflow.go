@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -65,6 +67,13 @@ func (s *Store) initialize() error {
 	if _, err := uuid.Parse(s.info.ID); err != nil {
 		return fmt.Errorf("invalid workspace identity")
 	}
+	// A misconfigured logo must not fail startup — the UI falls back to the
+	// letter avatar — but it should not fail silently either.
+	if s.info.LogoPath != "" {
+		if _, _, err := s.workspaceLogo(); err != nil {
+			log.Printf("workspace logo %q ignored: %v", s.info.LogoPath, err)
+		}
+	}
 	if err := safeFile(dir, "workflow.json"); err != nil {
 		return err
 	}
@@ -78,6 +87,49 @@ func (s *Store) initialize() error {
 	return err
 }
 func (s *Store) Info() WorkspaceInfo { return s.info }
+
+// WorkspaceLogo resolves the configured logoPath against the project root.
+// Anything absolute, escaping the root, or not an image is refused so a
+// hand-edited workspace.json cannot turn the logo endpoint into a file read.
+func (s *Store) WorkspaceLogo() (string, []byte, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.workspaceLogo()
+}
+
+func (s *Store) workspaceLogo() (string, []byte, error) {
+	logo := s.info.LogoPath
+	if logo == "" || filepath.IsAbs(logo) {
+		return "", nil, ErrNotFound
+	}
+	for _, part := range strings.Split(filepath.ToSlash(logo), "/") {
+		if part == ".." {
+			return "", nil, ErrNotFound
+		}
+	}
+	root, err := os.OpenRoot(s.root)
+	if err != nil {
+		return "", nil, fmt.Errorf("open workspace root: %w", err)
+	}
+	defer root.Close()
+	// Root resolves every component beneath the project, including symlinks,
+	// and keeps that boundary enforced during the read.
+	if info, err := root.Lstat(logo); err != nil || !info.Mode().IsRegular() {
+		return "", nil, ErrNotFound
+	}
+	data, err := root.ReadFile(logo)
+	if err != nil {
+		return "", nil, fmt.Errorf("%w: read workspace logo: %v", ErrNotFound, err)
+	}
+	contentType := http.DetectContentType(data)
+	if strings.HasSuffix(strings.ToLower(s.info.LogoPath), ".svg") {
+		contentType = "image/svg+xml"
+	}
+	if !strings.HasPrefix(contentType, "image/") {
+		return "", nil, fmt.Errorf("%w: workspace logo must be an image", ErrInvalidFileType)
+	}
+	return contentType, data, nil
+}
 func (s *Store) readWorkflow() (Workflow, error) {
 	dir := filepath.Dir(s.tasksDir)
 	if err := safeFile(dir, "workflow.json"); err != nil {
@@ -249,9 +301,6 @@ func (s *Store) UpdateTask(id, expected string, update TaskUpdate) (Task, error)
 				return t, err
 			}
 		case "status":
-			if update.Status == "archived" && t.Status != "archived" {
-				t.PreviousStatus = t.Status
-			}
 			t.Status = update.Status
 		case "priority":
 			t.Priority = update.Priority
@@ -272,30 +321,6 @@ func (s *Store) UpdateTask(id, expected string, update TaskUpdate) (Task, error)
 			return t, fmt.Errorf("%w: unknown task field", ErrInvalidName)
 		}
 	}
-	t.UpdatedAt = time.Now().UTC()
-	if err := s.writeTask(t); err != nil {
-		return t, err
-	}
-	return s.readTask(id)
-}
-func (s *Store) RestoreTask(id, expected string) (Task, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	t, err := s.readTask(id)
-	if err != nil {
-		return t, err
-	}
-	if expected == "" || expected != t.Revision {
-		return t, ErrConflict
-	}
-	if t.Status != "archived" {
-		return t, fmt.Errorf("%w: task is not archived", ErrInvalidName)
-	}
-	t.Status = t.PreviousStatus
-	if t.Status == "" || t.Status == "archived" {
-		t.Status = "open"
-	}
-	t.PreviousStatus = ""
 	t.UpdatedAt = time.Now().UTC()
 	if err := s.writeTask(t); err != nil {
 		return t, err

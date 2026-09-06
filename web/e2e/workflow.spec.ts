@@ -1,9 +1,11 @@
 import { test, expect, type Page } from "@playwright/test";
 
 async function setTaskStatus(page: Page, status: string) {
-  await page.getByRole("button", { name: "Task status", exact: true }).click();
-  await page.getByRole("option", { name: status[0].toUpperCase() + status.slice(1), exact: true }).click();
-  await expect(page.getByRole("button", { name: "Task status", exact: true })).toHaveText(status[0].toUpperCase() + status.slice(1));
+  const label = status[0].toUpperCase() + status.slice(1);
+  const button = page.getByRole("button", { name: /Task status/ });
+  await button.click();
+  await page.getByRole("option", { name: label, exact: true }).click();
+  await expect(button).toHaveAttribute("aria-label", `Task status: ${label}`);
 }
 async function createTask(page: Page, title: string) {
   await page.goto("/tasks");
@@ -47,9 +49,7 @@ async function selectText(page: Page, text: string) {
   await page.getByRole("button", { name: "Add comment", exact: true }).click();
 }
 
-test("tasks, comments, phase switching, and archive restore", async ({
-  page,
-}) => {
+test("tasks, comments, phase switching, and archiving", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await createTask(page, "Shape the agent workflow");
@@ -68,10 +68,26 @@ test("tasks, comments, phase switching, and archive restore", async ({
   await dot.click();
   const thread = page.getByRole("dialog", { name: "Comment thread" });
   await expect(thread).toBeVisible();
+  // Resolved threads stay on the page and can be reopened in place.
   await thread.getByRole("button", { name: "Resolve thread" }).click();
-  await expect(dot).toBeHidden();
-  await page.getByRole("button", { name: /Show all \d+ threads/ }).click();
+  await expect(
+    thread.getByRole("button", { name: "Reopen thread" }),
+  ).toBeVisible();
   await expect(dot).toBeVisible();
+  await expect(dot).toHaveClass(/resolved/);
+
+  await page.getByRole("button", { name: "Source", exact: true }).click();
+  await expect(
+    page.getByRole("textbox", { name: "Markdown source" }),
+  ).toContainText("```cadence-comments");
+  await expect(page.locator(".save-status.saved")).toContainText("Saved");
+  await page.reload();
+  await page.getByRole("button", { name: "Spec", exact: true }).click();
+  await expect(dot).toBeVisible();
+  await expect(dot).toHaveClass(/resolved/);
+  await expect(
+    page.getByRole("textbox", { name: "Document body", exact: true }),
+  ).not.toContainText("cadence-comments");
 
   // Move to implementation planning and make it the current phase by
   // hovering/clicking its timeline number, which swaps to a clock icon.
@@ -88,17 +104,14 @@ test("tasks, comments, phase switching, and archive restore", async ({
   );
   await makeCurrent.click();
   await expect(
-    page.getByRole("button", { name: "Implementation planning: current phase" }),
+    page.getByRole("button", {
+      name: "Implementation planning: current phase",
+    }),
   ).toBeVisible();
 
-  // Archive the task, then restore it to its previous status.
+  // Archived is just a status — leaving it is an ordinary status change.
   await setTaskStatus(page, "archived");
-  await page
-    .getByRole("button", { name: "Restore task", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "Task status", exact: true }),
-  ).toHaveText("Focus");
+  await setTaskStatus(page, "focus");
 
   expect(errors).toEqual([]);
 });

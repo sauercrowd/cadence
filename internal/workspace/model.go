@@ -22,6 +22,9 @@ type Workflow struct {
 type WorkspaceInfo struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+	// LogoPath is a project-relative path to a workspace logo image,
+	// resolved against the project root. Empty means no logo.
+	LogoPath string `json:"logoPath,omitempty"`
 }
 type TaskUpdate struct {
 	CurrentPhaseID string

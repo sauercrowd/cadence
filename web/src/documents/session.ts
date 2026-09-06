@@ -107,6 +107,33 @@ export class DocumentSession {
     if (this.state.status !== "conflict")
       this.timer = setTimeout(() => void this.flush(), 650);
   }
+  completeUpload(marker: string, markdown: string) {
+    // Markers are generated UUID URLs. Read the latest draft, so edits made
+    // in another tab or after returning to this document survive completion.
+    if (!/^cadence-upload:[a-f0-9-]+$/.test(marker)) return;
+    const pattern = new RegExp(String.raw`\[(?:\\.|[^\]])*\]\(${marker}\)`);
+    if (!pattern.test(this.state.content)) return; // The user deleted it.
+    const content = this.state.content.replace(
+      pattern,
+      (match, offset: number, source: string) => {
+        if (!markdown.startsWith("![](") && !markdown.startsWith("<video "))
+          return markdown;
+        // A pending link can sit within a paragraph. Media must occupy its own
+        // block when replacing it without a mounted rich editor.
+        const before = source.slice(0, offset),
+          after = source.slice(offset + match.length);
+        const prefix = before
+          ? "\n".repeat(2 - /\n{0,2}$/.exec(before)![0].length)
+          : "";
+        const suffix = after
+          ? "\n".repeat(2 - /^\n{0,2}/.exec(after)![0].length)
+          : "";
+        return prefix + markdown + suffix;
+      },
+    );
+    this.update({ generation: this.state.generation + 1 });
+    this.edit(content);
+  }
   async flush(): Promise<void> {
     clearTimeout(this.timer);
     if (this.inFlight) {

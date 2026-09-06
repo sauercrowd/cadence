@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -32,12 +33,13 @@ func TestTaskStateAndWorkflowSnapshot(t *testing.T) {
 	if task.AgentStatus == nil {
 		t.Fatal("archiving must not imply agent cancellation")
 	}
-	if _, err := s.RestoreTask(task.ID, oldRevision); !errors.Is(err, ErrConflict) {
-		t.Fatalf("stale restore: %v", err)
+	if _, err := s.UpdateTask(task.ID, oldRevision, TaskUpdate{Status: "focus", Fields: []string{"status"}}); !errors.Is(err, ErrConflict) {
+		t.Fatalf("stale status update: %v", err)
 	}
-	task, err = s.RestoreTask(task.ID, task.Revision)
+	// Archived is just a status: leaving it is an ordinary status change.
+	task, err = s.UpdateTask(task.ID, task.Revision, TaskUpdate{Status: "focus", Fields: []string{"status"}})
 	if err != nil || task.Status != "focus" {
-		t.Fatalf("restore: %v %+v", err, task)
+		t.Fatalf("unarchive: %v %+v", err, task)
 	}
 	w, _ := s.GetWorkflow()
 	w.Phases[0].Name = "New goal name"
@@ -158,5 +160,94 @@ func TestExternalWritesAndContainment(t *testing.T) {
 	}
 	if _, err := s.GetDocument(task.ID, doc.ID); err == nil {
 		t.Fatal("symlink should be rejected")
+	}
+}
+
+func TestWorkspaceLogo(t *testing.T) {
+	root := t.TempDir()
+	s, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := s.WorkspaceLogo(); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected no logo by default, got %v", err)
+	}
+
+	png := []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}
+	if err := os.MkdirAll(filepath.Join(root, "assets"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "assets", "logo.png"), png, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s.info.LogoPath = "assets/logo.png"
+	contentType, data, err := s.WorkspaceLogo()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if contentType != "image/png" || string(data) != string(png) {
+		t.Fatalf("unexpected logo: %s %v", contentType, data)
+	}
+
+	for _, bad := range []string{"../task.json", "/etc/hostname", "..", "assets/../../x"} {
+		s.info.LogoPath = bad
+		if _, _, err := s.WorkspaceLogo(); !errors.Is(err, ErrNotFound) {
+			t.Fatalf("expected traversal rejection for %q, got %v", bad, err)
+		}
+	}
+	s.info.LogoPath = "assets/missing.png"
+	if _, _, err := s.WorkspaceLogo(); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected missing logo, got %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "assets", "notes.txt"), []byte("hello"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s.info.LogoPath = "assets/notes.txt"
+	if _, _, err := s.WorkspaceLogo(); !errors.Is(err, ErrInvalidFileType) {
+		t.Fatalf("expected non-image rejection, got %v", err)
+	}
+}
+
+func TestWorkspaceLogoPathPersists(t *testing.T) {
+	root := t.TempDir()
+	first, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated := first.Info()
+	updated.LogoPath = "assets/logo.png"
+	raw, _ := json.MarshalIndent(updated, "", "  ")
+	if err := os.WriteFile(filepath.Join(root, ".cadence", "workspace.json"), raw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	second, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second.Info().LogoPath != "assets/logo.png" {
+		t.Fatalf("logo path did not persist: %+v", second.Info())
+	}
+}
+
+func TestWorkspaceLogoRejectsSymlinkEscapes(t *testing.T) {
+	root, outside := t.TempDir(), t.TempDir()
+	store, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(outside, "logo.png"), []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(root, "assets")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(outside, "logo.png"), filepath.Join(root, "logo.png")); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"assets/logo.png", "logo.png"} {
+		store.info.LogoPath = path
+		if _, _, err := store.WorkspaceLogo(); !errors.Is(err, ErrNotFound) {
+			t.Fatalf("expected symlink escape rejection for %q, got %v", path, err)
+		}
 	}
 }

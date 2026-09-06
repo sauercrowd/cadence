@@ -105,7 +105,7 @@ In the initial external-session workflow, I mark agent status as `working` when 
 
 Confirmed initial scope: run locally against one project directory at a time. The directory is the project context; an explicit project registry, project switcher, and cross-project overview can come later.
 
-Keep local file storage for the first version: task metadata in JSON and documents in Markdown inside the project's `.worker/` directory. Phase metadata and workflow settings can extend this model as needed. The existing directory name is an implementation detail, independent of the Cadence branding.
+Keep local file storage for the first version: task metadata in JSON and documents in Markdown inside the project's `.cadence/` directory. Phase metadata and workflow settings can extend this model as needed.
 
 A hosted cloud platform is a possible later direction. The first milestone is a useful local workflow; accounts, cloud sync, hosted storage, and multi-user collaboration are outside the initial scope. Keep filesystem access behind the backend API so a later storage change can be addressed without making local paths part of the frontend's product model. Detailed cloud architecture is deferred.
 
@@ -168,26 +168,26 @@ Confirmed interaction: comments appear as small position markers, such as dots, 
 
 Proposed interaction details: hovering keeps the thread visible while the pointer moves into it; clicking keeps it open until dismissed. Markers are keyboard focusable and can be opened with Enter or Space and dismissed with Escape. Their click targets can be larger than the visible dots. Markers follow their passages as text reflows, and nearby markers remain individually accessible.
 
-Comment data lives inside the same Markdown document in a `<comments></comments>` section. Parsing separates this metadata from the document body before Markdown rendering or rich-text editing. The section is hidden from the rendered document, but retained on save and available to agents reading the file. Saving combines the edited body and current comment data back into the same file.
+Comment data lives inside the same Markdown document in a `cadence-comments` section. Parsing separates this metadata from the document body before Markdown rendering or rich-text editing. The section is hidden from the rendered document, but retained on save and available to agents reading the file. Saving combines the edited body and current comment data back into the same file.
 
 Proposed storage encoding is JSON inside a single trailing section, matching the current scaffolding's general approach:
 
-```md
+````md
 # Goal
 
 The document content goes here.
 
-<comments>
+```cadence-comments
 {
   "version": 2,
   "threads": []
 }
-</comments>
 ```
+````
 
 The thread and anchoring schema includes stable thread IDs, passage references, replies, authors, timestamps, and resolution state. Anchors refer to document content rather than screen coordinates. This is a clean-slate implementation; legacy comment formats do not need migration.
 
-The metadata parser must distinguish the trailing section from literal `<comments>` examples inside code blocks. Invalid metadata must be preserved and surfaced as a recoverable error rather than silently discarded on save.
+The metadata parser must distinguish the trailing section from literal `cadence-comments` examples inside code blocks. Invalid metadata must be preserved and surfaced as a recoverable error rather than silently discarded on save.
 
 ### Reusable workflow and prompts
 
@@ -234,7 +234,7 @@ MCP access is a later extension, as in the original plan. Direct GitHub integrat
 5. Human review uncovers a scope mismatch. I reopen the appropriate planning phase, retain previous results, and can see which later work needs reassessment.
 6. I archive and restore a task without losing its documents. I update a shared prompt without silently changing instructions for existing tasks.
 7. I write and review a realistic spec in the new editor, use formatting and comments, switch tasks, and return without losing content or my place. The experience is assessed in the browser, including keyboard navigation and save failures.
-8. I hover or click a comment marker and read or reply to its thread in an overlay without shifting the document. After saving and reopening, the thread remains attached to its passage; its data is present in the file's `<comments>` section and absent from the rendered body.
+8. I hover or click a comment marker and read or reply to its thread in an overlay without shifting the document. After saving and reopening, the thread remains attached to its passage; its data is present in the file's `cadence-comments` section and absent from the rendered body.
 9. I copy a phase prompt with its context, use it in an external agent session, and bring the result back into Cadence. I can update agent activity and phase progress explicitly. If the agent edits the document on disk, I can load that result without silently overwriting my own unsaved edits.
 
 10. I complete one task without a PR and another with several PRs, following each task's phase instructions. Cadence imposes neither a PR count nor a requirement to split the task.

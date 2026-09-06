@@ -11,7 +11,7 @@ A local workspace for shaping tasks, handing work to external agents, and review
 Cadence stores its data inside the project it is opened for:
 
 ```text
-.worker/
+.cadence/
 ├── workspace.json
 ├── workflow.json
 ├── tasks/<task-id>/
@@ -21,24 +21,24 @@ Cadence stores its data inside the project it is opened for:
 └── trash/
 ```
 
-The `.worker` directory name is retained. This is a clean-slate implementation, without legacy schema migration. Task manifests use schema version 1.
+This is a clean-slate implementation, without legacy schema migration. Task manifests use schema version 1.
 
-Markdown files are the source of truth. Comment anchors/messages and each phase's agent instructions live only in trailing metadata sections, stripped before rendering and shown collapsed in the editor instead:
+Markdown files are the source of truth. Comment anchors and messages live in a trailing `cadence-comments` code block. Agent instructions use an `<agent-instructions>` section. Cadence separates both from the rendered body:
 
-```md
+````md
 The annotated text remains ordinary Markdown.
 
 <agent-instructions>
 Work with me to define the outcome...
 </agent-instructions>
 
-<comments>
+```cadence-comments
 {
   "version": 2,
   "threads": []
 }
-</comments>
 ```
+````
 
 ## Run
 
@@ -69,7 +69,7 @@ The Vite development server is available at <http://127.0.0.1:5173> and proxies 
 
 ## Editing and recovery
 
-Each document has three tabs: Spec (the rich editor for the document body), Agent instructions (a plain Markdown editor scoped to just the `<agent-instructions>` section), and Source (the actual file, byte for byte). The rich editor supports headings, emphasis, links, lists/checklists, fenced code, horizontal rules, and simple pipe tables. Source mode handles unsupported constructs such as raw HTML, images, reference links, and footnotes, and always shows the actual file — including the `<comments>` and `<agent-instructions>` sections — so it also doubles as the way to hand-repair a broken envelope. Rich editing normalizes Markdown formatting; it is not a byte-preserving round trip. Invalid comment metadata opens in source-repair mode without being discarded. Ambiguous or deleted anchors retain their threads for explicit reattachment.
+Each document has three tabs: Spec (the rich editor for the document body), Agent instructions (a plain Markdown editor scoped to just the `<agent-instructions>` section), and Source (the actual file, byte for byte). The rich editor supports headings, emphasis, links, lists/checklists, fenced code, horizontal rules, simple pipe tables, pasted images, and sandboxed HTML embeds. Use a `cadence-html` fenced code block for live HTML; ordinary `html` fences remain code examples. Edit embed content in Source. Raw iframe tags remain in source mode. Pasted images are stored as attachments under the task's `assets/` directory and referenced by relative path. Source mode handles remaining unsupported constructs such as other raw HTML, reference links, and footnotes, and always shows the actual file — including the `cadence-comments` and `<agent-instructions>` sections — so it also doubles as the way to hand-repair a broken envelope. Rich editing normalizes Markdown formatting; it is not a byte-preserving round trip. Invalid comment metadata opens in source-repair mode without being discarded. Ambiguous or deleted anchors retain their threads for explicit reattachment.
 
 Documents autosave with revision checks and per-document save queues. Pending drafts are cached in browser IndexedDB. External changes are checked on focus and every five seconds; competing edits open a base/local/disk comparison. File replacements retain recovery backups under `history/`; there are no phase-acceptance snapshots or reassessment rules. Handoffs use the current documents.
 

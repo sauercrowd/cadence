@@ -485,6 +485,7 @@ type WorkspaceInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	LogoPath      string                 `protobuf:"bytes,3,opt,name=logo_path,json=logoPath,proto3" json:"logo_path,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -529,6 +530,13 @@ func (x *WorkspaceInfo) GetId() string {
 func (x *WorkspaceInfo) GetName() string {
 	if x != nil {
 		return x.Name
+	}
+	return ""
+}
+
+func (x *WorkspaceInfo) GetLogoPath() string {
+	if x != nil {
+		return x.LogoPath
 	}
 	return ""
 }
@@ -633,58 +641,6 @@ func (x *UpdateTaskRequest) GetCurrentPhaseId() string {
 	return ""
 }
 
-type RevisionTaskRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Revision      string                 `protobuf:"bytes,2,opt,name=revision,proto3" json:"revision,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RevisionTaskRequest) Reset() {
-	*x = RevisionTaskRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RevisionTaskRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RevisionTaskRequest) ProtoMessage() {}
-
-func (x *RevisionTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RevisionTaskRequest.ProtoReflect.Descriptor instead.
-func (*RevisionTaskRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *RevisionTaskRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *RevisionTaskRequest) GetRevision() string {
-	if x != nil {
-		return x.Revision
-	}
-	return ""
-}
-
 type UpdateWorkflowRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Workflow      *Workflow              `protobuf:"bytes,1,opt,name=workflow,proto3" json:"workflow,omitempty"`
@@ -695,7 +651,7 @@ type UpdateWorkflowRequest struct {
 
 func (x *UpdateWorkflowRequest) Reset() {
 	*x = UpdateWorkflowRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[8]
+	mi := &file_worker_v1_worker_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -707,7 +663,7 @@ func (x *UpdateWorkflowRequest) String() string {
 func (*UpdateWorkflowRequest) ProtoMessage() {}
 
 func (x *UpdateWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[8]
+	mi := &file_worker_v1_worker_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -720,7 +676,7 @@ func (x *UpdateWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*UpdateWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{8}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *UpdateWorkflowRequest) GetWorkflow() *Workflow {
@@ -751,7 +707,7 @@ type Document struct {
 
 func (x *Document) Reset() {
 	*x = Document{}
-	mi := &file_worker_v1_worker_proto_msgTypes[9]
+	mi := &file_worker_v1_worker_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -763,7 +719,7 @@ func (x *Document) String() string {
 func (*Document) ProtoMessage() {}
 
 func (x *Document) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[9]
+	mi := &file_worker_v1_worker_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -776,7 +732,7 @@ func (x *Document) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Document.ProtoReflect.Descriptor instead.
 func (*Document) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{9}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Document) GetId() string {
@@ -831,7 +787,7 @@ type ListTasksResponse struct {
 
 func (x *ListTasksResponse) Reset() {
 	*x = ListTasksResponse{}
-	mi := &file_worker_v1_worker_proto_msgTypes[10]
+	mi := &file_worker_v1_worker_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -843,7 +799,7 @@ func (x *ListTasksResponse) String() string {
 func (*ListTasksResponse) ProtoMessage() {}
 
 func (x *ListTasksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[10]
+	mi := &file_worker_v1_worker_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -856,7 +812,7 @@ func (x *ListTasksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTasksResponse.ProtoReflect.Descriptor instead.
 func (*ListTasksResponse) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{10}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListTasksResponse) GetTasks() []*Task {
@@ -882,7 +838,7 @@ type CreateTaskRequest struct {
 
 func (x *CreateTaskRequest) Reset() {
 	*x = CreateTaskRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[11]
+	mi := &file_worker_v1_worker_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -894,7 +850,7 @@ func (x *CreateTaskRequest) String() string {
 func (*CreateTaskRequest) ProtoMessage() {}
 
 func (x *CreateTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[11]
+	mi := &file_worker_v1_worker_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -907,7 +863,7 @@ func (x *CreateTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTaskRequest.ProtoReflect.Descriptor instead.
 func (*CreateTaskRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{11}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CreateTaskRequest) GetName() string {
@@ -926,7 +882,7 @@ type TaskRequest struct {
 
 func (x *TaskRequest) Reset() {
 	*x = TaskRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[12]
+	mi := &file_worker_v1_worker_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -938,7 +894,7 @@ func (x *TaskRequest) String() string {
 func (*TaskRequest) ProtoMessage() {}
 
 func (x *TaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[12]
+	mi := &file_worker_v1_worker_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -951,7 +907,7 @@ func (x *TaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskRequest.ProtoReflect.Descriptor instead.
 func (*TaskRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{12}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *TaskRequest) GetTaskId() string {
@@ -971,7 +927,7 @@ type RenameTaskRequest struct {
 
 func (x *RenameTaskRequest) Reset() {
 	*x = RenameTaskRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[13]
+	mi := &file_worker_v1_worker_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -983,7 +939,7 @@ func (x *RenameTaskRequest) String() string {
 func (*RenameTaskRequest) ProtoMessage() {}
 
 func (x *RenameTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[13]
+	mi := &file_worker_v1_worker_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -996,7 +952,7 @@ func (x *RenameTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenameTaskRequest.ProtoReflect.Descriptor instead.
 func (*RenameTaskRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{13}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *RenameTaskRequest) GetTaskId() string {
@@ -1023,7 +979,7 @@ type CreateDocumentRequest struct {
 
 func (x *CreateDocumentRequest) Reset() {
 	*x = CreateDocumentRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[14]
+	mi := &file_worker_v1_worker_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1035,7 +991,7 @@ func (x *CreateDocumentRequest) String() string {
 func (*CreateDocumentRequest) ProtoMessage() {}
 
 func (x *CreateDocumentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[14]
+	mi := &file_worker_v1_worker_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1048,7 +1004,7 @@ func (x *CreateDocumentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateDocumentRequest.ProtoReflect.Descriptor instead.
 func (*CreateDocumentRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{14}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CreateDocumentRequest) GetTaskId() string {
@@ -1075,7 +1031,7 @@ type DocumentRequest struct {
 
 func (x *DocumentRequest) Reset() {
 	*x = DocumentRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[15]
+	mi := &file_worker_v1_worker_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1087,7 +1043,7 @@ func (x *DocumentRequest) String() string {
 func (*DocumentRequest) ProtoMessage() {}
 
 func (x *DocumentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[15]
+	mi := &file_worker_v1_worker_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1100,7 +1056,7 @@ func (x *DocumentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DocumentRequest.ProtoReflect.Descriptor instead.
 func (*DocumentRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{15}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DocumentRequest) GetTaskId() string {
@@ -1128,7 +1084,7 @@ type RenameDocumentRequest struct {
 
 func (x *RenameDocumentRequest) Reset() {
 	*x = RenameDocumentRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[16]
+	mi := &file_worker_v1_worker_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1140,7 +1096,7 @@ func (x *RenameDocumentRequest) String() string {
 func (*RenameDocumentRequest) ProtoMessage() {}
 
 func (x *RenameDocumentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[16]
+	mi := &file_worker_v1_worker_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1153,7 +1109,7 @@ func (x *RenameDocumentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenameDocumentRequest.ProtoReflect.Descriptor instead.
 func (*RenameDocumentRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{16}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RenameDocumentRequest) GetTaskId() string {
@@ -1189,7 +1145,7 @@ type UpdateDocumentRequest struct {
 
 func (x *UpdateDocumentRequest) Reset() {
 	*x = UpdateDocumentRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[17]
+	mi := &file_worker_v1_worker_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1201,7 +1157,7 @@ func (x *UpdateDocumentRequest) String() string {
 func (*UpdateDocumentRequest) ProtoMessage() {}
 
 func (x *UpdateDocumentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[17]
+	mi := &file_worker_v1_worker_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1214,7 +1170,7 @@ func (x *UpdateDocumentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDocumentRequest.ProtoReflect.Descriptor instead.
 func (*UpdateDocumentRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{17}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *UpdateDocumentRequest) GetTaskId() string {
@@ -1283,10 +1239,11 @@ const file_worker_v1_worker_proto_rawDesc = "" +
 	"documentIdJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06\"Z\n" +
 	"\bWorkflow\x122\n" +
 	"\x06phases\x18\x01 \x03(\v2\x1a.worker.v1.PhaseDefinitionR\x06phases\x12\x1a\n" +
-	"\brevision\x18\x02 \x01(\tR\brevision\"3\n" +
+	"\brevision\x18\x02 \x01(\tR\brevision\"P\n" +
 	"\rWorkspaceInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"\xc6\x02\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
+	"\tlogo_path\x18\x03 \x01(\tR\blogoPath\"\xc6\x02\n" +
 	"\x11UpdateTaskRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\brevision\x18\x02 \x01(\tR\brevision\x12\x12\n" +
@@ -1296,10 +1253,7 @@ const file_worker_v1_worker_proto_rawDesc = "" +
 	"\fagent_status\x18\x06 \x01(\x0e2\x16.worker.v1.AgentStatusR\vagentStatus\x12;\n" +
 	"\vupdate_mask\x18\b \x01(\v2\x1a.google.protobuf.FieldMaskR\n" +
 	"updateMask\x12(\n" +
-	"\x10current_phase_id\x18\t \x01(\tR\x0ecurrentPhaseIdJ\x04\b\a\x10\b\"A\n" +
-	"\x13RevisionTaskRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
-	"\brevision\x18\x02 \x01(\tR\brevision\"d\n" +
+	"\x10current_phase_id\x18\t \x01(\tR\x0ecurrentPhaseIdJ\x04\b\a\x10\b\"d\n" +
 	"\x15UpdateWorkflowRequest\x12/\n" +
 	"\bworkflow\x18\x01 \x01(\v2\x13.worker.v1.WorkflowR\bworkflow\x12\x1a\n" +
 	"\brevision\x18\x02 \x01(\tR\brevision\"\x99\x01\n" +
@@ -1347,14 +1301,12 @@ const file_worker_v1_worker_proto_rawDesc = "" +
 	"\x14TASK_STATUS_ARCHIVED\x10\x04*>\n" +
 	"\vAgentStatus\x12\x15\n" +
 	"\x11AGENT_STATUS_NONE\x10\x00\x12\x18\n" +
-	"\x14AGENT_STATUS_WORKING\x10\x012\xd5\b\n" +
+	"\x14AGENT_STATUS_WORKING\x10\x012\xd1\a\n" +
 	"\x10WorkspaceService\x12E\n" +
 	"\fGetWorkspace\x12\x16.google.protobuf.Empty\x1a\x18.worker.v1.WorkspaceInfo\"\x03\x90\x02\x01\x127\n" +
 	"\aGetTask\x12\x16.worker.v1.TaskRequest\x1a\x0f.worker.v1.Task\"\x03\x90\x02\x01\x12=\n" +
 	"\n" +
-	"UpdateTask\x12\x1c.worker.v1.UpdateTaskRequest\x1a\x0f.worker.v1.Task\"\x00\x12@\n" +
-	"\vArchiveTask\x12\x1e.worker.v1.RevisionTaskRequest\x1a\x0f.worker.v1.Task\"\x00\x12@\n" +
-	"\vRestoreTask\x12\x1e.worker.v1.RevisionTaskRequest\x1a\x0f.worker.v1.Task\"\x00\x12?\n" +
+	"UpdateTask\x12\x1c.worker.v1.UpdateTaskRequest\x1a\x0f.worker.v1.Task\"\x00\x12?\n" +
 	"\vGetWorkflow\x12\x16.google.protobuf.Empty\x1a\x13.worker.v1.Workflow\"\x03\x90\x02\x01\x12I\n" +
 	"\x0eUpdateWorkflow\x12 .worker.v1.UpdateWorkflowRequest\x1a\x13.worker.v1.Workflow\"\x00\x12F\n" +
 	"\tListTasks\x12\x16.google.protobuf.Empty\x1a\x1c.worker.v1.ListTasksResponse\"\x03\x90\x02\x01\x12=\n" +
@@ -1383,7 +1335,7 @@ func file_worker_v1_worker_proto_rawDescGZIP() []byte {
 }
 
 var file_worker_v1_worker_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_worker_v1_worker_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_worker_v1_worker_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_worker_v1_worker_proto_goTypes = []any{
 	(TaskStatus)(0),               // 0: worker.v1.TaskStatus
 	(AgentStatus)(0),              // 1: worker.v1.AgentStatus
@@ -1394,25 +1346,24 @@ var file_worker_v1_worker_proto_goTypes = []any{
 	(*Workflow)(nil),              // 6: worker.v1.Workflow
 	(*WorkspaceInfo)(nil),         // 7: worker.v1.WorkspaceInfo
 	(*UpdateTaskRequest)(nil),     // 8: worker.v1.UpdateTaskRequest
-	(*RevisionTaskRequest)(nil),   // 9: worker.v1.RevisionTaskRequest
-	(*UpdateWorkflowRequest)(nil), // 10: worker.v1.UpdateWorkflowRequest
-	(*Document)(nil),              // 11: worker.v1.Document
-	(*ListTasksResponse)(nil),     // 12: worker.v1.ListTasksResponse
-	(*CreateTaskRequest)(nil),     // 13: worker.v1.CreateTaskRequest
-	(*TaskRequest)(nil),           // 14: worker.v1.TaskRequest
-	(*RenameTaskRequest)(nil),     // 15: worker.v1.RenameTaskRequest
-	(*CreateDocumentRequest)(nil), // 16: worker.v1.CreateDocumentRequest
-	(*DocumentRequest)(nil),       // 17: worker.v1.DocumentRequest
-	(*RenameDocumentRequest)(nil), // 18: worker.v1.RenameDocumentRequest
-	(*UpdateDocumentRequest)(nil), // 19: worker.v1.UpdateDocumentRequest
-	(*timestamppb.Timestamp)(nil), // 20: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil), // 21: google.protobuf.FieldMask
-	(*emptypb.Empty)(nil),         // 22: google.protobuf.Empty
+	(*UpdateWorkflowRequest)(nil), // 9: worker.v1.UpdateWorkflowRequest
+	(*Document)(nil),              // 10: worker.v1.Document
+	(*ListTasksResponse)(nil),     // 11: worker.v1.ListTasksResponse
+	(*CreateTaskRequest)(nil),     // 12: worker.v1.CreateTaskRequest
+	(*TaskRequest)(nil),           // 13: worker.v1.TaskRequest
+	(*RenameTaskRequest)(nil),     // 14: worker.v1.RenameTaskRequest
+	(*CreateDocumentRequest)(nil), // 15: worker.v1.CreateDocumentRequest
+	(*DocumentRequest)(nil),       // 16: worker.v1.DocumentRequest
+	(*RenameDocumentRequest)(nil), // 17: worker.v1.RenameDocumentRequest
+	(*UpdateDocumentRequest)(nil), // 18: worker.v1.UpdateDocumentRequest
+	(*timestamppb.Timestamp)(nil), // 19: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil), // 20: google.protobuf.FieldMask
+	(*emptypb.Empty)(nil),         // 21: google.protobuf.Empty
 }
 var file_worker_v1_worker_proto_depIdxs = []int32{
 	2,  // 0: worker.v1.Task.documents:type_name -> worker.v1.DocumentSummary
-	20, // 1: worker.v1.Task.created_at:type_name -> google.protobuf.Timestamp
-	20, // 2: worker.v1.Task.updated_at:type_name -> google.protobuf.Timestamp
+	19, // 1: worker.v1.Task.created_at:type_name -> google.protobuf.Timestamp
+	19, // 2: worker.v1.Task.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 3: worker.v1.Task.status:type_name -> worker.v1.TaskStatus
 	1,  // 4: worker.v1.Task.agent_status:type_name -> worker.v1.AgentStatus
 	5,  // 5: worker.v1.Task.phases:type_name -> worker.v1.TaskPhase
@@ -1420,43 +1371,39 @@ var file_worker_v1_worker_proto_depIdxs = []int32{
 	4,  // 7: worker.v1.Workflow.phases:type_name -> worker.v1.PhaseDefinition
 	0,  // 8: worker.v1.UpdateTaskRequest.status:type_name -> worker.v1.TaskStatus
 	1,  // 9: worker.v1.UpdateTaskRequest.agent_status:type_name -> worker.v1.AgentStatus
-	21, // 10: worker.v1.UpdateTaskRequest.update_mask:type_name -> google.protobuf.FieldMask
+	20, // 10: worker.v1.UpdateTaskRequest.update_mask:type_name -> google.protobuf.FieldMask
 	6,  // 11: worker.v1.UpdateWorkflowRequest.workflow:type_name -> worker.v1.Workflow
 	3,  // 12: worker.v1.ListTasksResponse.tasks:type_name -> worker.v1.Task
-	22, // 13: worker.v1.WorkspaceService.GetWorkspace:input_type -> google.protobuf.Empty
-	14, // 14: worker.v1.WorkspaceService.GetTask:input_type -> worker.v1.TaskRequest
+	21, // 13: worker.v1.WorkspaceService.GetWorkspace:input_type -> google.protobuf.Empty
+	13, // 14: worker.v1.WorkspaceService.GetTask:input_type -> worker.v1.TaskRequest
 	8,  // 15: worker.v1.WorkspaceService.UpdateTask:input_type -> worker.v1.UpdateTaskRequest
-	9,  // 16: worker.v1.WorkspaceService.ArchiveTask:input_type -> worker.v1.RevisionTaskRequest
-	9,  // 17: worker.v1.WorkspaceService.RestoreTask:input_type -> worker.v1.RevisionTaskRequest
-	22, // 18: worker.v1.WorkspaceService.GetWorkflow:input_type -> google.protobuf.Empty
-	10, // 19: worker.v1.WorkspaceService.UpdateWorkflow:input_type -> worker.v1.UpdateWorkflowRequest
-	22, // 20: worker.v1.WorkspaceService.ListTasks:input_type -> google.protobuf.Empty
-	13, // 21: worker.v1.WorkspaceService.CreateTask:input_type -> worker.v1.CreateTaskRequest
-	15, // 22: worker.v1.WorkspaceService.RenameTask:input_type -> worker.v1.RenameTaskRequest
-	14, // 23: worker.v1.WorkspaceService.DeleteTask:input_type -> worker.v1.TaskRequest
-	16, // 24: worker.v1.WorkspaceService.CreateDocument:input_type -> worker.v1.CreateDocumentRequest
-	17, // 25: worker.v1.WorkspaceService.GetDocument:input_type -> worker.v1.DocumentRequest
-	18, // 26: worker.v1.WorkspaceService.RenameDocument:input_type -> worker.v1.RenameDocumentRequest
-	19, // 27: worker.v1.WorkspaceService.UpdateDocument:input_type -> worker.v1.UpdateDocumentRequest
-	17, // 28: worker.v1.WorkspaceService.DeleteDocument:input_type -> worker.v1.DocumentRequest
-	7,  // 29: worker.v1.WorkspaceService.GetWorkspace:output_type -> worker.v1.WorkspaceInfo
-	3,  // 30: worker.v1.WorkspaceService.GetTask:output_type -> worker.v1.Task
-	3,  // 31: worker.v1.WorkspaceService.UpdateTask:output_type -> worker.v1.Task
-	3,  // 32: worker.v1.WorkspaceService.ArchiveTask:output_type -> worker.v1.Task
-	3,  // 33: worker.v1.WorkspaceService.RestoreTask:output_type -> worker.v1.Task
-	6,  // 34: worker.v1.WorkspaceService.GetWorkflow:output_type -> worker.v1.Workflow
-	6,  // 35: worker.v1.WorkspaceService.UpdateWorkflow:output_type -> worker.v1.Workflow
-	12, // 36: worker.v1.WorkspaceService.ListTasks:output_type -> worker.v1.ListTasksResponse
-	3,  // 37: worker.v1.WorkspaceService.CreateTask:output_type -> worker.v1.Task
-	3,  // 38: worker.v1.WorkspaceService.RenameTask:output_type -> worker.v1.Task
-	22, // 39: worker.v1.WorkspaceService.DeleteTask:output_type -> google.protobuf.Empty
-	11, // 40: worker.v1.WorkspaceService.CreateDocument:output_type -> worker.v1.Document
-	11, // 41: worker.v1.WorkspaceService.GetDocument:output_type -> worker.v1.Document
-	11, // 42: worker.v1.WorkspaceService.RenameDocument:output_type -> worker.v1.Document
-	11, // 43: worker.v1.WorkspaceService.UpdateDocument:output_type -> worker.v1.Document
-	22, // 44: worker.v1.WorkspaceService.DeleteDocument:output_type -> google.protobuf.Empty
-	29, // [29:45] is the sub-list for method output_type
-	13, // [13:29] is the sub-list for method input_type
+	21, // 16: worker.v1.WorkspaceService.GetWorkflow:input_type -> google.protobuf.Empty
+	9,  // 17: worker.v1.WorkspaceService.UpdateWorkflow:input_type -> worker.v1.UpdateWorkflowRequest
+	21, // 18: worker.v1.WorkspaceService.ListTasks:input_type -> google.protobuf.Empty
+	12, // 19: worker.v1.WorkspaceService.CreateTask:input_type -> worker.v1.CreateTaskRequest
+	14, // 20: worker.v1.WorkspaceService.RenameTask:input_type -> worker.v1.RenameTaskRequest
+	13, // 21: worker.v1.WorkspaceService.DeleteTask:input_type -> worker.v1.TaskRequest
+	15, // 22: worker.v1.WorkspaceService.CreateDocument:input_type -> worker.v1.CreateDocumentRequest
+	16, // 23: worker.v1.WorkspaceService.GetDocument:input_type -> worker.v1.DocumentRequest
+	17, // 24: worker.v1.WorkspaceService.RenameDocument:input_type -> worker.v1.RenameDocumentRequest
+	18, // 25: worker.v1.WorkspaceService.UpdateDocument:input_type -> worker.v1.UpdateDocumentRequest
+	16, // 26: worker.v1.WorkspaceService.DeleteDocument:input_type -> worker.v1.DocumentRequest
+	7,  // 27: worker.v1.WorkspaceService.GetWorkspace:output_type -> worker.v1.WorkspaceInfo
+	3,  // 28: worker.v1.WorkspaceService.GetTask:output_type -> worker.v1.Task
+	3,  // 29: worker.v1.WorkspaceService.UpdateTask:output_type -> worker.v1.Task
+	6,  // 30: worker.v1.WorkspaceService.GetWorkflow:output_type -> worker.v1.Workflow
+	6,  // 31: worker.v1.WorkspaceService.UpdateWorkflow:output_type -> worker.v1.Workflow
+	11, // 32: worker.v1.WorkspaceService.ListTasks:output_type -> worker.v1.ListTasksResponse
+	3,  // 33: worker.v1.WorkspaceService.CreateTask:output_type -> worker.v1.Task
+	3,  // 34: worker.v1.WorkspaceService.RenameTask:output_type -> worker.v1.Task
+	21, // 35: worker.v1.WorkspaceService.DeleteTask:output_type -> google.protobuf.Empty
+	10, // 36: worker.v1.WorkspaceService.CreateDocument:output_type -> worker.v1.Document
+	10, // 37: worker.v1.WorkspaceService.GetDocument:output_type -> worker.v1.Document
+	10, // 38: worker.v1.WorkspaceService.RenameDocument:output_type -> worker.v1.Document
+	10, // 39: worker.v1.WorkspaceService.UpdateDocument:output_type -> worker.v1.Document
+	21, // 40: worker.v1.WorkspaceService.DeleteDocument:output_type -> google.protobuf.Empty
+	27, // [27:41] is the sub-list for method output_type
+	13, // [13:27] is the sub-list for method input_type
 	13, // [13:13] is the sub-list for extension type_name
 	13, // [13:13] is the sub-list for extension extendee
 	0,  // [0:13] is the sub-list for field type_name
@@ -1473,7 +1420,7 @@ func file_worker_v1_worker_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_worker_v1_worker_proto_rawDesc), len(file_worker_v1_worker_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   18,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
