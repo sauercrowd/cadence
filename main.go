@@ -42,7 +42,7 @@ func main() {
 		IdleTimeout:       90 * time.Second,
 	}
 
-	log.Printf("Worker is serving %s at http://%s", store.Root(), *address)
+	log.Printf("Cadence is serving %s at http://%s", store.Root(), *address)
 	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func requestLogger(next http.Handler) http.Handler {
 
 func init() {
 	flag.Usage = func() {
-		_, _ = fmt.Fprintln(flag.CommandLine.Output(), "Usage: worker [flags] [project-directory]")
+		_, _ = fmt.Fprintln(flag.CommandLine.Output(), "Usage: cadence [flags] [project-directory]")
 		flag.PrintDefaults()
 	}
 }

@@ -22,11 +22,11 @@ func NewHandler(store *workspace.Store) *Handler {
 }
 
 func (h *Handler) ListTasks(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[workerv1.ListTasksResponse], error) {
-	tasks, err := h.store.ListTasks()
+	tasks, warnings, err := h.store.ListTasksWithErrors()
 	if err != nil {
 		return nil, rpcError(err)
 	}
-	response := &workerv1.ListTasksResponse{Tasks: make([]*workerv1.Task, 0, len(tasks))}
+	response := &workerv1.ListTasksResponse{Tasks: make([]*workerv1.Task, 0, len(tasks)), Errors: warnings}
 	for _, task := range tasks {
 		response.Tasks = append(response.Tasks, taskToProto(task))
 	}
@@ -110,6 +110,7 @@ func taskToProto(task workspace.Task) *workerv1.Task {
 		Documents: documents,
 		CreatedAt: timestamppb.New(task.CreatedAt),
 		UpdatedAt: timestamppb.New(task.UpdatedAt),
+		Status:    statusProto(task.Status), Priority: int32(task.Priority), AgentStatus: agentProto(task.AgentStatus), CurrentPhaseId: task.CurrentPhaseID, Revision: task.Revision, Phases: phasesProto(task.Phases),
 	}
 }
 

@@ -30,11 +30,19 @@ type DocumentSummary struct {
 }
 
 type Task struct {
-	ID        string            `json:"id"`
-	Name      string            `json:"name"`
-	Documents []DocumentSummary `json:"documents"`
-	CreatedAt time.Time         `json:"createdAt"`
-	UpdatedAt time.Time         `json:"updatedAt"`
+	SchemaVersion  int               `json:"schemaVersion"`
+	ID             string            `json:"id"`
+	Name           string            `json:"name"`
+	Documents      []DocumentSummary `json:"documents"`
+	CreatedAt      time.Time         `json:"createdAt"`
+	UpdatedAt      time.Time         `json:"updatedAt"`
+	Status         string            `json:"status"`
+	Priority       int               `json:"priority"`
+	AgentStatus    *string           `json:"agentStatus"`
+	CurrentPhaseID string            `json:"currentPhaseId"`
+	PreviousStatus string            `json:"previousStatus,omitempty"`
+	Phases         []TaskPhase       `json:"phases"`
+	Revision       string            `json:"-"`
 }
 
 type Document struct {
@@ -49,6 +57,7 @@ type Store struct {
 	tasksDir string
 	trashDir string
 	mu       sync.Mutex
+	info     WorkspaceInfo
 }
 
 func NewStore(projectRoot string) (*Store, error) {
@@ -63,10 +72,13 @@ func NewStore(projectRoot string) (*Store, error) {
 		tasksDir: filepath.Join(workerDir, "tasks"),
 		trashDir: filepath.Join(workerDir, "trash"),
 	}
-	for _, dir := range []string{store.tasksDir, store.trashDir} {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+	for _, dir := range []string{workerDir, store.tasksDir, store.trashDir} {
+		if err := ensureDirectory(dir); err != nil {
 			return nil, fmt.Errorf("create workspace directory: %w", err)
 		}
+	}
+	if err := store.initialize(); err != nil {
+		return nil, err
 	}
 	return store, nil
 }
@@ -99,6 +111,29 @@ func (s *Store) ListTasks() ([]Task, error) {
 	return tasks, nil
 }
 
+func (s *Store) ListTasksWithErrors() ([]Task, []string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	entries, err := os.ReadDir(s.tasksDir)
+	if err != nil {
+		return nil, nil, err
+	}
+	tasks := []Task{}
+	warnings := []string{}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		task, err := s.readTask(entry.Name())
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("%s: %s", entry.Name(), err))
+			continue
+		}
+		tasks = append(tasks, task)
+	}
+	return tasks, warnings, nil
+}
+
 func (s *Store) CreateTask(name string) (Task, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -109,6 +144,7 @@ func (s *Store) CreateTask(name string) (Task, error) {
 	}
 	now := time.Now().UTC()
 	task := Task{
+		SchemaVersion: 1, Status: "open", Priority: 2,
 		ID:        uuid.NewString(),
 		Name:      name,
 		Documents: []DocumentSummary{},
@@ -118,10 +154,17 @@ func (s *Store) CreateTask(name string) (Task, error) {
 	if err := os.Mkdir(s.taskDir(task.ID), 0o755); err != nil {
 		return Task{}, fmt.Errorf("create task directory: %w", err)
 	}
+	workflow, err := s.readWorkflow()
+	if err != nil {
+		return Task{}, err
+	}
+	if err := s.initializePhases(&task, workflow); err != nil {
+		return Task{}, err
+	}
 	if err := s.writeTask(task); err != nil {
 		return Task{}, err
 	}
-	return task, nil
+	return s.readTask(task.ID)
 }
 
 func (s *Store) RenameTask(id, name string) (Task, error) {
@@ -238,8 +281,11 @@ func (s *Store) UpdateDocument(taskID, documentID, content, expectedRevision str
 	if err != nil {
 		return Document{}, err
 	}
-	if expectedRevision != "" && current.Revision != expectedRevision {
+	if expectedRevision == "" || current.Revision != expectedRevision {
 		return Document{}, ErrConflict
+	}
+	if err := s.backup(task.ID, summary.ID+"-"+current.Revision+".md", []byte(current.Content)); err != nil {
+		return Document{}, err
 	}
 	if err := atomicWrite(filepath.Join(s.taskDir(taskID), summary.Filename), []byte(content), 0o644); err != nil {
 		return Document{}, fmt.Errorf("save document: %w", err)
@@ -258,6 +304,11 @@ func (s *Store) DeleteDocument(taskID, documentID string) error {
 	task, summary, err := s.findDocument(taskID, documentID)
 	if err != nil {
 		return err
+	}
+	for _, phase := range task.Phases {
+		if phase.DocumentID == documentID {
+			return fmt.Errorf("%w: phase documents cannot be deleted", ErrInvalidName)
+		}
 	}
 	source := filepath.Join(s.taskDir(taskID), summary.Filename)
 	target := filepath.Join(s.trashDir, fmt.Sprintf("document-%s-%s-%d.md", taskID, documentID, time.Now().UnixNano()))
@@ -289,6 +340,9 @@ func (s *Store) findDocument(taskID, documentID string) (Task, DocumentSummary, 
 }
 
 func (s *Store) readDocument(task Task, summary DocumentSummary) (Document, error) {
+	if err := safeFile(s.taskDir(task.ID), summary.Filename); err != nil {
+		return Document{}, err
+	}
 	content, err := os.ReadFile(filepath.Join(s.taskDir(task.ID), summary.Filename))
 	if errors.Is(err, os.ErrNotExist) {
 		return Document{}, ErrNotFound
@@ -308,6 +362,12 @@ func (s *Store) readTask(id string) (Task, error) {
 	if _, err := uuid.Parse(id); err != nil {
 		return Task{}, ErrNotFound
 	}
+	if err := safeFile(s.tasksDir, id); err != nil {
+		return Task{}, err
+	}
+	if err := safeFile(s.taskDir(id), "task.json"); err != nil {
+		return Task{}, err
+	}
 	data, err := os.ReadFile(filepath.Join(s.taskDir(id), "task.json"))
 	if errors.Is(err, os.ErrNotExist) {
 		return Task{}, ErrNotFound
@@ -322,10 +382,52 @@ func (s *Store) readTask(id string) (Task, error) {
 	if task.ID != id {
 		return Task{}, fmt.Errorf("task directory and manifest IDs do not match")
 	}
-	return task, nil
+	if task.SchemaVersion != 1 {
+		return Task{}, fmt.Errorf("unsupported task schema for %s", id)
+	}
+	if err := validateTask(task); err != nil {
+		return Task{}, err
+	}
+	task.Revision = revision(data)
+	workflow, err := s.readWorkflow()
+	if err != nil {
+		return Task{}, err
+	}
+	synced, changed, err := s.syncPhases(task, workflow)
+	if err != nil {
+		return Task{}, err
+	}
+	if !changed {
+		return synced, nil
+	}
+	synced.UpdatedAt = time.Now().UTC()
+	if err := s.writeTask(synced); err != nil {
+		return Task{}, err
+	}
+	data, err = os.ReadFile(filepath.Join(s.taskDir(id), "task.json"))
+	if err != nil {
+		return Task{}, fmt.Errorf("read task: %w", err)
+	}
+	synced.Revision = revision(data)
+	return synced, nil
 }
 
 func (s *Store) writeTask(task Task) error {
+	if err := validateTask(task); err != nil {
+		return err
+	}
+	path := filepath.Join(s.taskDir(task.ID), "task.json")
+	if err := safeFile(s.taskDir(task.ID), "task.json"); err != nil {
+		return err
+	}
+	if old, err := os.ReadFile(path); err == nil {
+		if task.Revision != "" && revision(old) != task.Revision {
+			return ErrConflict
+		}
+		if err := s.backup(task.ID, "task-"+revision(old)+".json", old); err != nil {
+			return err
+		}
+	}
 	data, err := json.MarshalIndent(task, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encode task: %w", err)
@@ -346,14 +448,16 @@ func (s *Store) availableFilename(task Task, wanted, exceptID string) string {
 			used[strings.ToLower(document.Filename)] = true
 		}
 	}
-	if !used[strings.ToLower(wanted)] {
+	_, exists := os.Stat(filepath.Join(s.taskDir(task.ID), wanted))
+	if !used[strings.ToLower(wanted)] && errors.Is(exists, os.ErrNotExist) {
 		return wanted
 	}
 	extension := filepath.Ext(wanted)
 	base := strings.TrimSuffix(wanted, extension)
 	for i := 2; ; i++ {
 		candidate := fmt.Sprintf("%s-%d%s", base, i, extension)
-		if !used[strings.ToLower(candidate)] {
+		_, exists := os.Stat(filepath.Join(s.taskDir(task.ID), candidate))
+		if !used[strings.ToLower(candidate)] && errors.Is(exists, os.ErrNotExist) {
 			return candidate
 		}
 	}

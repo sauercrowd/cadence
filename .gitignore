@@ -1,5 +1,8 @@
 /worker
+/cadence
 /node_modules/
 /internal/web/dist/assets/
 /.worker/
 *.tmp
+/test-results/
+/playwright-report/

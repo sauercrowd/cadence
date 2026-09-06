@@ -34,6 +34,27 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// WorkspaceServiceGetWorkspaceProcedure is the fully-qualified name of the WorkspaceService's
+	// GetWorkspace RPC.
+	WorkspaceServiceGetWorkspaceProcedure = "/worker.v1.WorkspaceService/GetWorkspace"
+	// WorkspaceServiceGetTaskProcedure is the fully-qualified name of the WorkspaceService's GetTask
+	// RPC.
+	WorkspaceServiceGetTaskProcedure = "/worker.v1.WorkspaceService/GetTask"
+	// WorkspaceServiceUpdateTaskProcedure is the fully-qualified name of the WorkspaceService's
+	// UpdateTask RPC.
+	WorkspaceServiceUpdateTaskProcedure = "/worker.v1.WorkspaceService/UpdateTask"
+	// WorkspaceServiceArchiveTaskProcedure is the fully-qualified name of the WorkspaceService's
+	// ArchiveTask RPC.
+	WorkspaceServiceArchiveTaskProcedure = "/worker.v1.WorkspaceService/ArchiveTask"
+	// WorkspaceServiceRestoreTaskProcedure is the fully-qualified name of the WorkspaceService's
+	// RestoreTask RPC.
+	WorkspaceServiceRestoreTaskProcedure = "/worker.v1.WorkspaceService/RestoreTask"
+	// WorkspaceServiceGetWorkflowProcedure is the fully-qualified name of the WorkspaceService's
+	// GetWorkflow RPC.
+	WorkspaceServiceGetWorkflowProcedure = "/worker.v1.WorkspaceService/GetWorkflow"
+	// WorkspaceServiceUpdateWorkflowProcedure is the fully-qualified name of the WorkspaceService's
+	// UpdateWorkflow RPC.
+	WorkspaceServiceUpdateWorkflowProcedure = "/worker.v1.WorkspaceService/UpdateWorkflow"
 	// WorkspaceServiceListTasksProcedure is the fully-qualified name of the WorkspaceService's
 	// ListTasks RPC.
 	WorkspaceServiceListTasksProcedure = "/worker.v1.WorkspaceService/ListTasks"
@@ -65,6 +86,13 @@ const (
 
 // WorkspaceServiceClient is a client for the worker.v1.WorkspaceService service.
 type WorkspaceServiceClient interface {
+	GetWorkspace(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.WorkspaceInfo], error)
+	GetTask(context.Context, *connect.Request[v1.TaskRequest]) (*connect.Response[v1.Task], error)
+	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.Task], error)
+	ArchiveTask(context.Context, *connect.Request[v1.RevisionTaskRequest]) (*connect.Response[v1.Task], error)
+	RestoreTask(context.Context, *connect.Request[v1.RevisionTaskRequest]) (*connect.Response[v1.Task], error)
+	GetWorkflow(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.Workflow], error)
+	UpdateWorkflow(context.Context, *connect.Request[v1.UpdateWorkflowRequest]) (*connect.Response[v1.Workflow], error)
 	ListTasks(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.ListTasksResponse], error)
 	CreateTask(context.Context, *connect.Request[v1.CreateTaskRequest]) (*connect.Response[v1.Task], error)
 	RenameTask(context.Context, *connect.Request[v1.RenameTaskRequest]) (*connect.Response[v1.Task], error)
@@ -87,6 +115,51 @@ func NewWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, op
 	baseURL = strings.TrimRight(baseURL, "/")
 	workspaceServiceMethods := v1.File_worker_v1_worker_proto.Services().ByName("WorkspaceService").Methods()
 	return &workspaceServiceClient{
+		getWorkspace: connect.NewClient[emptypb.Empty, v1.WorkspaceInfo](
+			httpClient,
+			baseURL+WorkspaceServiceGetWorkspaceProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("GetWorkspace")),
+			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+			connect.WithClientOptions(opts...),
+		),
+		getTask: connect.NewClient[v1.TaskRequest, v1.Task](
+			httpClient,
+			baseURL+WorkspaceServiceGetTaskProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("GetTask")),
+			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+			connect.WithClientOptions(opts...),
+		),
+		updateTask: connect.NewClient[v1.UpdateTaskRequest, v1.Task](
+			httpClient,
+			baseURL+WorkspaceServiceUpdateTaskProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("UpdateTask")),
+			connect.WithClientOptions(opts...),
+		),
+		archiveTask: connect.NewClient[v1.RevisionTaskRequest, v1.Task](
+			httpClient,
+			baseURL+WorkspaceServiceArchiveTaskProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("ArchiveTask")),
+			connect.WithClientOptions(opts...),
+		),
+		restoreTask: connect.NewClient[v1.RevisionTaskRequest, v1.Task](
+			httpClient,
+			baseURL+WorkspaceServiceRestoreTaskProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("RestoreTask")),
+			connect.WithClientOptions(opts...),
+		),
+		getWorkflow: connect.NewClient[emptypb.Empty, v1.Workflow](
+			httpClient,
+			baseURL+WorkspaceServiceGetWorkflowProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("GetWorkflow")),
+			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+			connect.WithClientOptions(opts...),
+		),
+		updateWorkflow: connect.NewClient[v1.UpdateWorkflowRequest, v1.Workflow](
+			httpClient,
+			baseURL+WorkspaceServiceUpdateWorkflowProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("UpdateWorkflow")),
+			connect.WithClientOptions(opts...),
+		),
 		listTasks: connect.NewClient[emptypb.Empty, v1.ListTasksResponse](
 			httpClient,
 			baseURL+WorkspaceServiceListTasksProcedure,
@@ -148,6 +221,13 @@ func NewWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, op
 
 // workspaceServiceClient implements WorkspaceServiceClient.
 type workspaceServiceClient struct {
+	getWorkspace   *connect.Client[emptypb.Empty, v1.WorkspaceInfo]
+	getTask        *connect.Client[v1.TaskRequest, v1.Task]
+	updateTask     *connect.Client[v1.UpdateTaskRequest, v1.Task]
+	archiveTask    *connect.Client[v1.RevisionTaskRequest, v1.Task]
+	restoreTask    *connect.Client[v1.RevisionTaskRequest, v1.Task]
+	getWorkflow    *connect.Client[emptypb.Empty, v1.Workflow]
+	updateWorkflow *connect.Client[v1.UpdateWorkflowRequest, v1.Workflow]
 	listTasks      *connect.Client[emptypb.Empty, v1.ListTasksResponse]
 	createTask     *connect.Client[v1.CreateTaskRequest, v1.Task]
 	renameTask     *connect.Client[v1.RenameTaskRequest, v1.Task]
@@ -157,6 +237,41 @@ type workspaceServiceClient struct {
 	renameDocument *connect.Client[v1.RenameDocumentRequest, v1.Document]
 	updateDocument *connect.Client[v1.UpdateDocumentRequest, v1.Document]
 	deleteDocument *connect.Client[v1.DocumentRequest, emptypb.Empty]
+}
+
+// GetWorkspace calls worker.v1.WorkspaceService.GetWorkspace.
+func (c *workspaceServiceClient) GetWorkspace(ctx context.Context, req *connect.Request[emptypb.Empty]) (*connect.Response[v1.WorkspaceInfo], error) {
+	return c.getWorkspace.CallUnary(ctx, req)
+}
+
+// GetTask calls worker.v1.WorkspaceService.GetTask.
+func (c *workspaceServiceClient) GetTask(ctx context.Context, req *connect.Request[v1.TaskRequest]) (*connect.Response[v1.Task], error) {
+	return c.getTask.CallUnary(ctx, req)
+}
+
+// UpdateTask calls worker.v1.WorkspaceService.UpdateTask.
+func (c *workspaceServiceClient) UpdateTask(ctx context.Context, req *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.Task], error) {
+	return c.updateTask.CallUnary(ctx, req)
+}
+
+// ArchiveTask calls worker.v1.WorkspaceService.ArchiveTask.
+func (c *workspaceServiceClient) ArchiveTask(ctx context.Context, req *connect.Request[v1.RevisionTaskRequest]) (*connect.Response[v1.Task], error) {
+	return c.archiveTask.CallUnary(ctx, req)
+}
+
+// RestoreTask calls worker.v1.WorkspaceService.RestoreTask.
+func (c *workspaceServiceClient) RestoreTask(ctx context.Context, req *connect.Request[v1.RevisionTaskRequest]) (*connect.Response[v1.Task], error) {
+	return c.restoreTask.CallUnary(ctx, req)
+}
+
+// GetWorkflow calls worker.v1.WorkspaceService.GetWorkflow.
+func (c *workspaceServiceClient) GetWorkflow(ctx context.Context, req *connect.Request[emptypb.Empty]) (*connect.Response[v1.Workflow], error) {
+	return c.getWorkflow.CallUnary(ctx, req)
+}
+
+// UpdateWorkflow calls worker.v1.WorkspaceService.UpdateWorkflow.
+func (c *workspaceServiceClient) UpdateWorkflow(ctx context.Context, req *connect.Request[v1.UpdateWorkflowRequest]) (*connect.Response[v1.Workflow], error) {
+	return c.updateWorkflow.CallUnary(ctx, req)
 }
 
 // ListTasks calls worker.v1.WorkspaceService.ListTasks.
@@ -206,6 +321,13 @@ func (c *workspaceServiceClient) DeleteDocument(ctx context.Context, req *connec
 
 // WorkspaceServiceHandler is an implementation of the worker.v1.WorkspaceService service.
 type WorkspaceServiceHandler interface {
+	GetWorkspace(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.WorkspaceInfo], error)
+	GetTask(context.Context, *connect.Request[v1.TaskRequest]) (*connect.Response[v1.Task], error)
+	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.Task], error)
+	ArchiveTask(context.Context, *connect.Request[v1.RevisionTaskRequest]) (*connect.Response[v1.Task], error)
+	RestoreTask(context.Context, *connect.Request[v1.RevisionTaskRequest]) (*connect.Response[v1.Task], error)
+	GetWorkflow(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.Workflow], error)
+	UpdateWorkflow(context.Context, *connect.Request[v1.UpdateWorkflowRequest]) (*connect.Response[v1.Workflow], error)
 	ListTasks(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.ListTasksResponse], error)
 	CreateTask(context.Context, *connect.Request[v1.CreateTaskRequest]) (*connect.Response[v1.Task], error)
 	RenameTask(context.Context, *connect.Request[v1.RenameTaskRequest]) (*connect.Response[v1.Task], error)
@@ -224,6 +346,51 @@ type WorkspaceServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	workspaceServiceMethods := v1.File_worker_v1_worker_proto.Services().ByName("WorkspaceService").Methods()
+	workspaceServiceGetWorkspaceHandler := connect.NewUnaryHandler(
+		WorkspaceServiceGetWorkspaceProcedure,
+		svc.GetWorkspace,
+		connect.WithSchema(workspaceServiceMethods.ByName("GetWorkspace")),
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+		connect.WithHandlerOptions(opts...),
+	)
+	workspaceServiceGetTaskHandler := connect.NewUnaryHandler(
+		WorkspaceServiceGetTaskProcedure,
+		svc.GetTask,
+		connect.WithSchema(workspaceServiceMethods.ByName("GetTask")),
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+		connect.WithHandlerOptions(opts...),
+	)
+	workspaceServiceUpdateTaskHandler := connect.NewUnaryHandler(
+		WorkspaceServiceUpdateTaskProcedure,
+		svc.UpdateTask,
+		connect.WithSchema(workspaceServiceMethods.ByName("UpdateTask")),
+		connect.WithHandlerOptions(opts...),
+	)
+	workspaceServiceArchiveTaskHandler := connect.NewUnaryHandler(
+		WorkspaceServiceArchiveTaskProcedure,
+		svc.ArchiveTask,
+		connect.WithSchema(workspaceServiceMethods.ByName("ArchiveTask")),
+		connect.WithHandlerOptions(opts...),
+	)
+	workspaceServiceRestoreTaskHandler := connect.NewUnaryHandler(
+		WorkspaceServiceRestoreTaskProcedure,
+		svc.RestoreTask,
+		connect.WithSchema(workspaceServiceMethods.ByName("RestoreTask")),
+		connect.WithHandlerOptions(opts...),
+	)
+	workspaceServiceGetWorkflowHandler := connect.NewUnaryHandler(
+		WorkspaceServiceGetWorkflowProcedure,
+		svc.GetWorkflow,
+		connect.WithSchema(workspaceServiceMethods.ByName("GetWorkflow")),
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+		connect.WithHandlerOptions(opts...),
+	)
+	workspaceServiceUpdateWorkflowHandler := connect.NewUnaryHandler(
+		WorkspaceServiceUpdateWorkflowProcedure,
+		svc.UpdateWorkflow,
+		connect.WithSchema(workspaceServiceMethods.ByName("UpdateWorkflow")),
+		connect.WithHandlerOptions(opts...),
+	)
 	workspaceServiceListTasksHandler := connect.NewUnaryHandler(
 		WorkspaceServiceListTasksProcedure,
 		svc.ListTasks,
@@ -282,6 +449,20 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 	)
 	return "/worker.v1.WorkspaceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case WorkspaceServiceGetWorkspaceProcedure:
+			workspaceServiceGetWorkspaceHandler.ServeHTTP(w, r)
+		case WorkspaceServiceGetTaskProcedure:
+			workspaceServiceGetTaskHandler.ServeHTTP(w, r)
+		case WorkspaceServiceUpdateTaskProcedure:
+			workspaceServiceUpdateTaskHandler.ServeHTTP(w, r)
+		case WorkspaceServiceArchiveTaskProcedure:
+			workspaceServiceArchiveTaskHandler.ServeHTTP(w, r)
+		case WorkspaceServiceRestoreTaskProcedure:
+			workspaceServiceRestoreTaskHandler.ServeHTTP(w, r)
+		case WorkspaceServiceGetWorkflowProcedure:
+			workspaceServiceGetWorkflowHandler.ServeHTTP(w, r)
+		case WorkspaceServiceUpdateWorkflowProcedure:
+			workspaceServiceUpdateWorkflowHandler.ServeHTTP(w, r)
 		case WorkspaceServiceListTasksProcedure:
 			workspaceServiceListTasksHandler.ServeHTTP(w, r)
 		case WorkspaceServiceCreateTaskProcedure:
@@ -308,6 +489,34 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 
 // UnimplementedWorkspaceServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedWorkspaceServiceHandler struct{}
+
+func (UnimplementedWorkspaceServiceHandler) GetWorkspace(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.WorkspaceInfo], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("worker.v1.WorkspaceService.GetWorkspace is not implemented"))
+}
+
+func (UnimplementedWorkspaceServiceHandler) GetTask(context.Context, *connect.Request[v1.TaskRequest]) (*connect.Response[v1.Task], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("worker.v1.WorkspaceService.GetTask is not implemented"))
+}
+
+func (UnimplementedWorkspaceServiceHandler) UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.Task], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("worker.v1.WorkspaceService.UpdateTask is not implemented"))
+}
+
+func (UnimplementedWorkspaceServiceHandler) ArchiveTask(context.Context, *connect.Request[v1.RevisionTaskRequest]) (*connect.Response[v1.Task], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("worker.v1.WorkspaceService.ArchiveTask is not implemented"))
+}
+
+func (UnimplementedWorkspaceServiceHandler) RestoreTask(context.Context, *connect.Request[v1.RevisionTaskRequest]) (*connect.Response[v1.Task], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("worker.v1.WorkspaceService.RestoreTask is not implemented"))
+}
+
+func (UnimplementedWorkspaceServiceHandler) GetWorkflow(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.Workflow], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("worker.v1.WorkspaceService.GetWorkflow is not implemented"))
+}
+
+func (UnimplementedWorkspaceServiceHandler) UpdateWorkflow(context.Context, *connect.Request[v1.UpdateWorkflowRequest]) (*connect.Response[v1.Workflow], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("worker.v1.WorkspaceService.UpdateWorkflow is not implemented"))
+}
 
 func (UnimplementedWorkspaceServiceHandler) ListTasks(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.ListTasksResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("worker.v1.WorkspaceService.ListTasks is not implemented"))

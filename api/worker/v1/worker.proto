@@ -4,6 +4,7 @@ package worker.v1;
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/field_mask.proto";
 
 option go_package = "github.com/sauercrowd/worker/gen/worker/v1;workerv1";
 
@@ -19,7 +20,24 @@ message Task {
   repeated DocumentSummary documents = 3;
   google.protobuf.Timestamp created_at = 4;
   google.protobuf.Timestamp updated_at = 5;
+  TaskStatus status = 6;
+  int32 priority = 7;
+  AgentStatus agent_status = 8;
+  reserved 9;
+  string current_phase_id = 10;
+  repeated TaskPhase phases = 11;
+  string revision = 12;
 }
+
+enum TaskStatus { TASK_STATUS_UNSPECIFIED = 0; TASK_STATUS_OPEN = 1; TASK_STATUS_FOCUS = 2; TASK_STATUS_DONE = 3; TASK_STATUS_ARCHIVED = 4; }
+enum AgentStatus { AGENT_STATUS_NONE = 0; AGENT_STATUS_WORKING = 1; }
+message PhaseDefinition { string id = 1; string name = 2; reserved 3, 5, 7, 8; string mode = 4; string document_template = 6; }
+message TaskPhase { PhaseDefinition definition = 1; string document_id = 2; reserved 3, 4, 5; }
+message Workflow { repeated PhaseDefinition phases = 1; string revision = 2; }
+message WorkspaceInfo { string id = 1; string name = 2; }
+message UpdateTaskRequest { string id = 1; string revision = 2; string name = 3; TaskStatus status = 4; int32 priority = 5; AgentStatus agent_status = 6; reserved 7; google.protobuf.FieldMask update_mask = 8; string current_phase_id = 9; }
+message RevisionTaskRequest { string id = 1; string revision = 2; }
+message UpdateWorkflowRequest { Workflow workflow = 1; string revision = 2; }
 
 message Document {
   string id = 1;
@@ -32,6 +50,7 @@ message Document {
 
 message ListTasksResponse {
   repeated Task tasks = 1;
+  repeated string errors = 2;
 }
 
 message CreateTaskRequest {
@@ -71,6 +90,13 @@ message UpdateDocumentRequest {
 }
 
 service WorkspaceService {
+  rpc GetWorkspace(google.protobuf.Empty) returns (WorkspaceInfo) { option idempotency_level = NO_SIDE_EFFECTS; }
+  rpc GetTask(TaskRequest) returns (Task) { option idempotency_level = NO_SIDE_EFFECTS; }
+  rpc UpdateTask(UpdateTaskRequest) returns (Task) {}
+  rpc ArchiveTask(RevisionTaskRequest) returns (Task) {}
+  rpc RestoreTask(RevisionTaskRequest) returns (Task) {}
+  rpc GetWorkflow(google.protobuf.Empty) returns (Workflow) { option idempotency_level = NO_SIDE_EFFECTS; }
+  rpc UpdateWorkflow(UpdateWorkflowRequest) returns (Workflow) {}
   rpc ListTasks(google.protobuf.Empty) returns (ListTasksResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }

@@ -1,412 +1,344 @@
-import { ConnectError, Code } from "@connectrpc/connect";
-import { create } from "@bufbuild/protobuf";
-import { Check, FileText, LoaderCircle, Plus, RotateCcw, Search, X } from "lucide-react";
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Archive,
+  ArrowUpRight,
+  CircleDot,
+  Command,
+  Folder,
+  Layers2,
+  LoaderCircle,
+  Bot,
+  Plus,
+  Settings2,
+  X,
+} from "lucide-react";
+import { api, type Task, type Status } from "./data/api";
+import { useRoute, navigate } from "./app/router";
+import { TaskOverview, statusLabels, StatusIcon } from "./features/tasks/TaskOverview";
+import { TaskWorkspace } from "./features/workspace/TaskWorkspace";
+import { WorkflowSettings } from "./features/workflows/WorkflowSettings";
+import { Modal } from "./ui/Modal";
+import { PropertyPopup, flattenFields } from "./ui/PropertyMenu";
+import { priorityField, statusField } from "./features/tasks/propertyFields";
 
-import { workspaceClient } from "./api";
-import type { Document as WorkerDocument, Task } from "./gen/worker/v1/worker_pb";
-import { EmptySchema } from "@bufbuild/protobuf/wkt";
-import { MarkdownEditor, type MarkdownEditorAPI } from "./MarkdownEditor";
-import { type CommentThread, parseDocumentFile, serializeDocumentFile } from "./comments";
-
-type SaveState = "saved" | "saving" | "conflict" | "error";
-type CommentPopoverState = { id: string; left: number; top: number };
-
+const newTaskOptions = flattenFields([priorityField, statusField]);
+import { TaskSwitcher } from "./features/tasks/TaskSwitcher";
+import { hasUnsavedDocuments } from "./documents/session";
 export default function App() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [selectedTaskId, setSelectedTaskId] = useState<string>();
-  const [selectedDocumentId, setSelectedDocumentId] = useState<string>();
-  const [document, setDocument] = useState<WorkerDocument>();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>();
-  const [saveState, setSaveState] = useState<SaveState>("saved");
-  const [markdown, setMarkdown] = useState("");
-  const [comments, setComments] = useState<CommentThread[]>([]);
-  const [commentPopover, setCommentPopover] = useState<CommentPopoverState>();
-  const editorAPI = useRef<MarkdownEditorAPI | undefined>(undefined);
-  const markdownRef = useRef("");
-  const commentsRef = useRef<CommentThread[]>([]);
-  const revisions = useRef(new Map<string, string>());
-  const saveTimers = useRef(new Map<string, number>());
-  const saveQueue = useRef(Promise.resolve());
-
-  const selectedTask = tasks.find((task) => task.id === selectedTaskId);
-
-  const refreshTasks = useCallback(async () => {
-    const response = await workspaceClient.listTasks(create(EmptySchema));
-    setTasks(response.tasks);
-    setSelectedTaskId((current) => {
-      if (current && response.tasks.some((task) => task.id === current)) return current;
-      return response.tasks[0]?.id;
-    });
-    return response.tasks;
-  }, []);
-
-  useEffect(() => {
-    void refreshTasks()
-      .catch((reason: unknown) => setError(messageFor(reason)))
-      .finally(() => setLoading(false));
-  }, [refreshTasks]);
-
-  useEffect(() => {
-    if (!selectedTask) {
-      setSelectedDocumentId(undefined);
-      setDocument(undefined);
-      return;
-    }
-    setSelectedDocumentId((current) => {
-      if (current && selectedTask.documents.some((item) => item.id === current)) return current;
-      return selectedTask.documents[0]?.id;
-    });
-  }, [selectedTask]);
-
-  const loadDocument = useCallback(async (taskId: string, documentId: string) => {
-    setDocument(undefined);
-    setSaveState("saved");
+  const route = useRoute();
+  const [workspace, setWorkspace] = useState<{ id: string; name: string }>(),
+    [tasks, setTasks] = useState<Task[]>([]),
+    [loading, setLoading] = useState(true),
+    [error, setError] = useState(""),
+    [warnings, setWarnings] = useState<string[]>([]),
+    [creating, setCreating] = useState(false),
+    [switching, setSwitching] = useState(false),
+    [name, setName] = useState(""),
+    [priority, setPriority] = useState(2),
+    [status, setStatus] = useState<Status>("open"),
+    [propertyOpen, setPropertyOpen] = useState(false),
+    [busy, setBusy] = useState(false);
+  const latestFetch = useRef(0),
+    lastOverview = useRef("/tasks");
+  const onError = useCallback(
+    (reason: unknown) =>
+      setError(reason instanceof Error ? reason.message : String(reason)),
+    [],
+  );
+  const refresh = useCallback(async () => {
+    const id = ++latestFetch.current;
     try {
-      const loaded = await workspaceClient.getDocument({ taskId, documentId });
-      const parsed = parseDocumentFile(loaded.content);
-      revisions.current.set(documentId, loaded.revision);
-      markdownRef.current = parsed.markdown;
-      commentsRef.current = parsed.comments;
-      setMarkdown(parsed.markdown);
-      setComments(parsed.comments);
-      setCommentPopover(undefined);
-      setDocument(loaded);
-    } catch (reason) {
-      setError(messageFor(reason));
+      const result = await api.tasks();
+      if (id === latestFetch.current) {
+        setTasks(result.tasks);
+        setWarnings(result.errors);
+      }
+    } catch (error) {
+      onError(error);
+    } finally {
+      setLoading(false);
     }
   }, []);
-
   useEffect(() => {
-    if (selectedTaskId && selectedDocumentId) {
-      void loadDocument(selectedTaskId, selectedDocumentId);
-    }
-  }, [loadDocument, selectedDocumentId, selectedTaskId]);
-
-  const scheduleSave = useCallback((taskId: string, documentId: string, content: string) => {
-    const existing = saveTimers.current.get(documentId);
-    if (existing) window.clearTimeout(existing);
-    setSaveState("saving");
-    const timer = window.setTimeout(() => {
-      saveTimers.current.delete(documentId);
-      saveQueue.current = saveQueue.current.then(async () => {
-        try {
-          const saved = await workspaceClient.updateDocument({
-            taskId,
-            documentId,
-            content,
-            revision: revisions.current.get(documentId) ?? "",
-          });
-          revisions.current.set(documentId, saved.revision);
-          setSaveState("saved");
-        } catch (reason) {
-          const connectError = ConnectError.from(reason);
-          setSaveState(connectError.code === Code.Aborted ? "conflict" : "error");
-        }
-      });
-    }, 650);
-    saveTimers.current.set(documentId, timer);
+    void api.workspace().then(setWorkspace).catch(onError);
+    void refresh();
+    const focus = () => void refresh();
+    window.addEventListener("focus", focus);
+    return () => window.removeEventListener("focus", focus);
   }, []);
-
-  async function createTask(name: string) {
-    const task = await workspaceClient.createTask({ name });
-    await refreshTasks();
-    setSelectedTaskId(task.id);
-    setSelectedDocumentId(undefined);
-  }
-
-  async function createDocument(name: string) {
-    if (!selectedTaskId) return;
-    const created = await workspaceClient.createDocument({ taskId: selectedTaskId, name });
-    await refreshTasks();
-    setSelectedTaskId(selectedTaskId);
-    setSelectedDocumentId(created.id);
-  }
-
-  async function reloadDocument() {
-    if (selectedTaskId && selectedDocumentId) {
-      await loadDocument(selectedTaskId, selectedDocumentId);
-    }
-  }
-
-  function updateComments(next: CommentThread[]) {
-    if (!document) return;
-    commentsRef.current = next;
-    setComments(next);
-    scheduleSave(document.taskId, document.id, serializeDocumentFile(markdownRef.current, next));
-  }
-
-  function beginComment() {
-    const api = editorAPI.current;
-    const quote = api?.selectedText();
-    const rect = api?.selectionRect();
-    if (!api || !quote || !rect) {
-      setError("Select some text first");
-      return;
-    }
-    const thread: CommentThread = {
-      id: crypto.randomUUID(),
-      body: "",
-      quote,
-      status: "open",
-      createdAt: new Date().toISOString(),
+  useEffect(() => {
+    if (route.pathname === "/") navigate("/tasks");
+    if (route.pathname === "/focus") navigate("/tasks?status=focus");
+    if (route.pathname === "/archived") navigate("/tasks?status=archived");
+    if (["/focus", "/tasks", "/archived"].includes(route.pathname))
+      lastOverview.current = route.pathname + route.search;
+  }, [route]);
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      if (
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        event.isComposing ||
+        event.repeat ||
+        target.isContentEditable ||
+        ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) ||
+        document.querySelector("dialog[open]")
+      )
+        return;
+      if (event.key.toLowerCase() === "g") {
+        event.preventDefault();
+        setSwitching(true);
+      }
+      if (event.key.toLowerCase() === "t") {
+        event.preventDefault();
+        navigate(lastOverview.current);
+      }
+      if (event.key === "c") {
+        event.preventDefault();
+        setName("");
+        setPriority(2);
+        setStatus("open");
+        setCreating(true);
+      }
+      if (event.key === "/") {
+        event.preventDefault();
+        document
+          .querySelector<HTMLInputElement>('[aria-label="Filter tasks"]')
+          ?.focus();
+      }
     };
-    const next = [...commentsRef.current, thread];
-    commentsRef.current = next;
-    setComments(next);
-    api.addComment(thread.id);
-    setCommentPopover(popoverPosition(thread.id, rect));
-  }
-
-  function discardComment(id: string) {
-    editorAPI.current?.removeComment(id);
-    updateComments(commentsRef.current.filter((thread) => thread.id !== id));
-    setCommentPopover(undefined);
-  }
-
-  if (loading) {
-    return <div className="center-message"><LoaderCircle className="spin" size={20} /> Opening workspace</div>;
-  }
-
+    const unload = (event: BeforeUnloadEvent) => {
+      if (hasUnsavedDocuments()) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    document.addEventListener("keydown", key);
+    window.addEventListener("beforeunload", unload);
+    return () => {
+      document.removeEventListener("keydown", key);
+      window.removeEventListener("beforeunload", unload);
+    };
+  }, []);
+  const onTask = useCallback(
+    (task: Task) =>
+      setTasks((current) =>
+        current.some((t) => t.id === task.id)
+          ? current.map((t) => (t.id === task.id ? task : t))
+          : [...current, task],
+      ),
+    [],
+  );
+  const match = /^\/tasks\/([^/]+)\/documents\/([^/]+)$/.exec(route.pathname),
+    task = match ? tasks.find((t) => t.id === match[1]) : undefined;
+  const openTask = (task: Task) => {
+    const phase = task.phases.find(
+      (p) => p.definition.id === task.currentPhaseId,
+    );
+    const docId = phase?.documentId || task.documents[0]?.id;
+    if (docId) navigate(`/tasks/${task.id}/documents/${docId}`);
+  };
+  const create = () => {
+    setName("");
+    setPriority(2);
+    setStatus("open");
+    setCreating(true);
+  };
   return (
     <div className="app-shell">
-      <aside className="task-rail">
-        <div className="brand">worker<span className="brand-dot">.</span></div>
-        <div className="rail-label">Tasks</div>
-        <nav className="task-list" aria-label="Tasks">
-          {tasks.map((task) => (
-            <button
-              className={`task-item ${task.id === selectedTaskId ? "active" : ""}`}
-              key={task.id}
-              onClick={() => setSelectedTaskId(task.id)}
-            >
-              <span>{task.name}</span>
-              <small>{task.documents.length}</small>
-            </button>
-          ))}
+      <aside className="app-sidebar">
+        <div className="workspace-label" title={workspace?.name}>
+          <span className="workspace-avatar">
+            {workspace?.name.slice(0, 1).toUpperCase() || "C"}
+          </span>
+          <span>{workspace?.name || "Workspace"}</span>
+        </div>
+        <button className="sidebar-new" onClick={create}>
+          <Plus size={14} />
+          New task<kbd>C</kbd>
+        </button>
+        <nav aria-label="Main navigation">
+          <button
+            className={route.pathname === "/tasks" ? "active" : ""}
+            onClick={() => navigate(lastOverview.current)}
+            aria-label="Tasks"
+          >
+            <Layers2 size={16} />
+            Tasks
+          </button>
+          <button
+            className={route.pathname === "/settings/workflow" ? "active" : ""}
+            onClick={() => navigate("/settings/workflow")}
+          >
+            <Settings2 size={15} />
+            Phases
+          </button>
         </nav>
-        <CreateRow label="New task" placeholder="Task name" onCreate={createTask} />
+        <div className="sidebar-label settings-label">FOCUS</div>
+        <nav aria-label="Focused tasks" className="focused-tasks">
+          {tasks
+            .filter((t) => t.status === "focus")
+            .sort(
+              (a, b) =>
+                a.priority - b.priority || a.title.localeCompare(b.title),
+            )
+            .map((t) => (
+              <button
+                key={t.id}
+                title={t.title}
+                aria-label={t.title}
+                aria-current={task?.id === t.id ? "page" : undefined}
+                className={task?.id === t.id ? "active" : ""}
+                onClick={() => openTask(t)}
+              >
+                {t.agentStatus === "working" ? (
+                  <Bot size={15} aria-label="Agent working" />
+                ) : (
+                  <CircleDot size={15} />
+                )}
+                <span className="focused-task-title">{t.title}</span>
+              </button>
+            ))}
+          {!tasks.some((t) => t.status === "focus") && (
+            <p className="focus-empty">Tasks in Focus appear here.</p>
+          )}
+        </nav>
       </aside>
-
-      <aside className="document-rail">
-        {selectedTask ? (
-          <>
-            <header className="document-rail-header">
-              <div className="eyebrow">Task</div>
-              <h1>{selectedTask.name}</h1>
-            </header>
-            <div className="rail-label document-label">Documents</div>
-            <nav className="document-list" aria-label="Documents">
-              {selectedTask.documents.map((item) => (
-                <button
-                  className={`document-item ${item.id === selectedDocumentId ? "active" : ""}`}
-                  key={item.id}
-                  onClick={() => setSelectedDocumentId(item.id)}
-                >
-                  <FileText size={15} strokeWidth={1.7} />
-                  <span>{item.name}</span>
-                </button>
-              ))}
-            </nav>
-            <CreateRow label="New document" placeholder="Document name" onCreate={createDocument} />
-          </>
-        ) : (
-          <div className="rail-empty">Create a task to begin.</div>
+      <main className="app-main">
+        {error && (
+          <div className="global-error" role="alert">
+            <span>{error}</span>
+            <button className="text-button" onClick={() => void refresh()}>
+              Refresh
+            </button>
+            <button
+              className="icon-button"
+              aria-label="Dismiss error"
+              onClick={() => setError("")}
+            >
+              <X size={14} />
+            </button>
+          </div>
         )}
-      </aside>
-
-      <main className="workspace">
-        {document ? (
-          <>
-            <header className="workspace-header">
-              <div>
-                <h2>{document.name}</h2>
-                <div className="filename">{document.filename}</div>
-              </div>
-              <SaveIndicator state={saveState} onReload={reloadDocument} />
-            </header>
-            <div className="editor-scroll">
-              <MarkdownEditor
-                documentId={document.id}
-                value={markdown}
-                comments={comments}
-                onReady={(api) => { editorAPI.current = api; }}
-                onAddComment={beginComment}
-                onCommentClick={(id, rect) => setCommentPopover(popoverPosition(id, rect))}
-                onChange={(content) => {
-                  markdownRef.current = content;
-                  setMarkdown(content);
-                  scheduleSave(document.taskId, document.id, serializeDocumentFile(content, commentsRef.current));
-                }}
-              />
-            </div>
-          </>
-        ) : selectedTask ? (
-          <EmptyDocument onCreate={createDocument} />
+        {warnings.map((warning) => (
+          <div className="notice error" key={warning}>
+            {warning}
+          </div>
+        ))}
+        {loading ? (
+          <div className="loading-state">
+            <LoaderCircle className="working-spin" size={20} />
+            Opening workspace…
+          </div>
+        ) : match && task && workspace ? (
+          <TaskWorkspace
+            task={task}
+            documentId={match[2]}
+            workspaceId={workspace.id}
+            onTask={onTask}
+            onError={onError}
+            onBack={() => navigate(lastOverview.current)}
+          />
+        ) : match ? (
+          <div className="empty-state">
+            <h2>Task unavailable</h2>
+            <button className="button" onClick={() => navigate("/tasks")}>
+              All tasks
+            </button>
+          </div>
+        ) : route.pathname === "/settings/workflow" ? (
+          <WorkflowSettings onError={onError} />
         ) : (
-          <EmptyWorkspace onCreate={createTask} />
+          <TaskOverview
+            tasks={tasks}
+            route={route}
+            onOpen={openTask}
+            onCreate={create}
+            onRestore={(task) => {
+              void api.restore(task).then(onTask).catch(onError);
+            }}
+          />
         )}
       </main>
-
-      {commentPopover ? (
-        <CommentPopover
-          comments={comments}
-          thread={comments.find((thread) => thread.id === commentPopover.id)}
-          position={commentPopover}
-          onChange={updateComments}
-          onDiscard={discardComment}
-          onClose={() => setCommentPopover(undefined)}
-        />
-      ) : null}
-
-      {error ? <button className="error-toast" onClick={() => setError(undefined)}>{error}</button> : null}
-    </div>
-  );
-}
-
-function CommentPopover({ comments, thread, position, onChange, onDiscard, onClose }: {
-  comments: CommentThread[];
-  thread?: CommentThread;
-  position: CommentPopoverState;
-  onChange: (comments: CommentThread[]) => void;
-  onDiscard: (id: string) => void;
-  onClose: () => void;
-}) {
-  if (!thread) return null;
-  return (
-    <aside className={`comment-popover ${thread.status}`} style={{ left: position.left, top: position.top }}>
-      <button className="comment-close" onClick={onClose} aria-label="Close"><X size={14} /></button>
-      <div className="comment-quote">“{thread.quote}”</div>
-      {thread.body ? <p>{thread.body}</p> : (
-        <CommentComposer
-          onCancel={() => onDiscard(thread.id)}
-          onSubmit={(body) => onChange(commentsWith(thread.id, { body }))}
+      {switching && (
+        <TaskSwitcher
+          tasks={tasks}
+          onOpen={openTask}
+          onClose={() => setSwitching(false)}
         />
       )}
-      {thread.body ? (
-        <div className="comment-footer">
-          <span>{thread.status === "open" ? "Open" : "Resolved"}</span>
-          <button onClick={() => onChange(commentsWith(thread.id, {
-            status: thread.status === "open" ? "resolved" : "open",
-          }))}>{thread.status === "open" ? "Resolve" : "Reopen"}</button>
-        </div>
-      ) : null}
-      <span className="comment-popover-arrow" />
-    </aside>
-  );
-
-  function commentsWith(id: string, change: Partial<CommentThread>) {
-    return comments.map((item) => item.id === id ? { ...item, ...change } : item);
-  }
-}
-
-function CommentComposer({ onSubmit, onCancel }: { onSubmit: (body: string) => void; onCancel: () => void }) {
-  const [body, setBody] = useState("");
-  return (
-    <form className="comment-composer" onSubmit={(event) => {
-      event.preventDefault();
-      if (body.trim()) onSubmit(body.trim());
-    }}>
-      <textarea autoFocus value={body} onChange={(event) => setBody(event.target.value)} placeholder="Leave a comment…" />
-      <div><button type="button" onClick={onCancel}>Cancel</button><button type="submit" disabled={!body.trim()}>Add</button></div>
-    </form>
-  );
-}
-
-function CreateRow({ label, placeholder, onCreate }: {
-  label: string;
-  placeholder: string;
-  onCreate: (name: string) => Promise<void>;
-}) {
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    if (!name.trim() || busy) return;
-    setBusy(true);
-    try {
-      await onCreate(name.trim());
-      setName("");
-      setOpen(false);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (!open) {
-    return <button className="create-trigger" onClick={() => setOpen(true)}><Plus size={15} />{label}</button>;
-  }
-  return (
-    <form className="create-form" onSubmit={submit}>
-      <input autoFocus value={name} placeholder={placeholder} onChange={(event) => setName(event.target.value)} onKeyDown={(event) => {
-        if (event.key === "Escape") setOpen(false);
-      }} />
-      <button type="submit" aria-label="Create" disabled={!name.trim() || busy}><Check size={15} /></button>
-    </form>
-  );
-}
-
-function SaveIndicator({ state, onReload }: { state: SaveState; onReload: () => Promise<void> }) {
-  if (state === "saving") return <div className="save-state"><LoaderCircle className="spin" size={14} />Saving</div>;
-  if (state === "conflict") {
-    return <button className="save-state warning" onClick={() => void onReload()}><RotateCcw size={14} />Changed on disk — reload</button>;
-  }
-  if (state === "error") return <div className="save-state warning">Couldn’t save</div>;
-  return <div className="save-state"><Check size={14} />Saved</div>;
-}
-
-function EmptyWorkspace({ onCreate }: { onCreate: (name: string) => Promise<void> }) {
-  return (
-    <div className="empty-state">
-      <div className="empty-icon"><Plus size={22} /></div>
-      <h2>Create your first task</h2>
-      <p>A quiet place for the Markdown that shapes your work.</p>
-      <InlineCreate placeholder="Task name" action="Create task" onCreate={onCreate} />
+      {creating && (
+        <Modal title="New task" onClose={() => setCreating(false)}>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              setBusy(true);
+              void api
+                .createTask(name.trim(), { priority, status })
+                .then((task) => {
+                  onTask(task);
+                  setCreating(false);
+                  openTask(task);
+                })
+                .catch(onError)
+                .finally(() => setBusy(false));
+            }}
+          >
+            <div className="modal-content">
+              <div className="property-anchor">
+                <label>
+                  What would you like to achieve?
+                  <input
+                    autoFocus
+                    data-autofocus
+                    placeholder="A clear, concise task title"
+                    required
+                    maxLength={120}
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "/" && !event.nativeEvent.isComposing) {
+                        event.preventDefault();
+                        setPropertyOpen(true);
+                      }
+                    }}
+                  />
+                </label>
+                <div className="new-task-hint">
+                  <StatusIcon status={status} size={14} />
+                  {statusLabels[status]}
+                  <span>·</span>P{priority}
+                  <span className="muted">Press / to change</span>
+                </div>
+                {propertyOpen && (
+                  <PropertyPopup
+                    id="new-task-property-options"
+                    options={newTaskOptions}
+                    placeholder="Priority or status…"
+                    onChoose={(field, value) =>
+                      field === "priority"
+                        ? setPriority(Number(value))
+                        : setStatus(value as Status)
+                    }
+                    onClose={() => setPropertyOpen(false)}
+                  />
+                )}
+              </div>
+            </div>
+            <footer>
+              <button
+                className="button primary"
+                disabled={busy || !name.trim()}
+              >
+                {busy ? "Creating…" : "Create task"}
+                <ArrowUpRight size={14} />
+              </button>
+            </footer>
+          </form>
+        </Modal>
+      )}
     </div>
   );
-}
-
-function EmptyDocument({ onCreate }: { onCreate: (name: string) => Promise<void> }) {
-  return (
-    <div className="empty-state">
-      <div className="empty-icon"><FileText size={21} /></div>
-      <h2>Add a document</h2>
-      <p>Briefs, plans, notes—use whatever names fit the task.</p>
-      <InlineCreate placeholder="Document name" action="Create document" onCreate={onCreate} />
-    </div>
-  );
-}
-
-function InlineCreate({ placeholder, action, onCreate }: {
-  placeholder: string;
-  action: string;
-  onCreate: (name: string) => Promise<void>;
-}) {
-  const [name, setName] = useState("");
-  return (
-    <form className="inline-create" onSubmit={(event) => {
-      event.preventDefault();
-      if (!name.trim()) return;
-      void onCreate(name.trim()).then(() => setName(""));
-    }}>
-      <Search size={15} />
-      <input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder={placeholder} />
-      <button disabled={!name.trim()}>{action}</button>
-    </form>
-  );
-}
-
-function messageFor(reason: unknown) {
-  return ConnectError.from(reason).rawMessage || "Something went wrong";
-}
-
-function popoverPosition(id: string, rect: DOMRect): CommentPopoverState {
-  const width = 286;
-  const left = Math.max(12, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 12));
-  const preferredTop = rect.bottom + 12;
-  const top = Math.max(12, Math.min(preferredTop, window.innerHeight - 230));
-  return { id, left, top };
 }
