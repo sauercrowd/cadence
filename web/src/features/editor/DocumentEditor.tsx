@@ -152,7 +152,6 @@ export function DocumentEditor({
             Source
           </button>
         </div>
-        <span className="muted small">Markdown document</span>
       </div>
       {reason && <div className="notice">{reason}</div>}
       {mode === "source" ? (

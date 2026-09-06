@@ -228,7 +228,7 @@ export function TaskOverview({
       ) : (
         <div className="task-table">
           <div className="table-heading">
-            <span>Priority</span>
+            <span>Pri</span>
             <span>Task</span>
             <span>Phase</span>
             <span>Progress</span>
