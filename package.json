@@ -9,6 +9,7 @@
     "server": "go run .",
     "start": "go run .",
     "build": "tsc -p web/tsconfig.json && vite build --config web/vite.config.ts",
+    "build:binary": "pnpm build && go build -trimpath -o cadence .",
     "generate": "buf generate",
     "check": "tsc -p web/tsconfig.json --noEmit",
     "test": "vitest run",

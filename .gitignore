@@ -1,5 +1,7 @@
 /worker
 /cadence
+/cadence.exe
+/dist/
 /node_modules/
 /internal/web/dist/assets/
 /.cadence/

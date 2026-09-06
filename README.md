@@ -42,6 +42,18 @@ Work with me to define the outcome...
 
 ## Run
 
+Download the archive for your OS and architecture from [GitHub Releases](https://github.com/sauercrowd/workspace/releases), extract it, and run `./cadence` (`cadence.exe` on Windows). The binary includes the frontend and fonts; Node.js, Go, and separate web files are not needed at runtime. Project data is still stored in `.cadence/` inside the selected project.
+
+To build a single binary from source:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm build:binary
+./cadence ../my-project
+```
+
+The build command builds the frontend before Go embeds it. Running `go build` alone uses whatever frontend build is already present.
+
 Build the frontend and start Cadence in the current directory:
 
 ```bash
@@ -74,6 +86,12 @@ Each document has three tabs: Spec (the rich editor for the document body), Agen
 Documents autosave with revision checks and per-document save queues. Pending drafts are cached in browser IndexedDB. External changes are checked on focus and every five seconds; competing edits open a base/local/disk comparison. File replacements retain recovery backups under `history/`; there are no phase-acceptance snapshots or reassessment rules. Handoffs use the current documents.
 
 Prefer handing document ownership between the browser and external sessions. Arbitrary filesystem writers do not share the server's locking protocol: a write between the final revision check and rename can still race. This is a local tool, not an authenticated multi-user service.
+
+## Releases
+
+Push a version tag (for example, `git tag v0.1.0` followed by `git push origin v0.1.0`) to run the GitHub Actions release workflow. It tests the app, builds binaries with the frontend embedded for Linux, macOS, and Windows (amd64 and arm64), and publishes archives plus `checksums.txt` to a GitHub Release. Tags containing a hyphen, such as `v0.1.0-rc.1`, publish as prereleases. Publishing uses the built-in `GITHUB_TOKEN`.
+
+Run the workflow manually on a branch to build downloadable Actions artifacts without publishing a release. To build the same archives locally on Linux, run `bash scripts/release.sh` after installing dependencies; it requires Go, pnpm, tar, zip, and sha256sum and writes to `dist/`.
 
 ## Checks
 
