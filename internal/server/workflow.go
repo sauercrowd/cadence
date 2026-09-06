@@ -64,7 +64,7 @@ func workflowProto(w workspace.Workflow) *v1.Workflow {
 
 func (h *Handler) GetWorkspace(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.WorkspaceInfo], error) {
 	info := h.store.Info()
-	return connect.NewResponse(&v1.WorkspaceInfo{Id: info.ID, Name: info.Name}), nil
+	return connect.NewResponse(&v1.WorkspaceInfo{Id: info.ID, Name: info.Name, LogoPath: info.LogoPath}), nil
 }
 func (h *Handler) GetTask(_ context.Context, r *connect.Request[v1.TaskRequest]) (*connect.Response[v1.Task], error) {
 	t, e := h.store.GetTask(r.Msg.TaskId)

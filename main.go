@@ -33,6 +33,8 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/api/", http.StripPrefix("/api", api))
+	mux.Handle("/api/tasks/", server.NewFilesHandler(store))
+	mux.Handle("/api/workspace/logo", server.NewFilesHandler(store))
 	mux.Handle("/", workerweb.Handler())
 
 	httpServer := &http.Server{

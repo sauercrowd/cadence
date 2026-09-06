@@ -4,6 +4,7 @@ import type { Task, Status } from "../../data/api";
 import { statusLabels, StatusIcon } from "./TaskOverview";
 import { PropertyPopup, flattenFields } from "../../ui/PropertyMenu";
 import { priorityField, statusField } from "./propertyFields";
+import { KeyHint } from "../../app/keys";
 
 const priorityOptions = flattenFields([priorityField]);
 const statusOptions = flattenFields([statusField]);
@@ -64,8 +65,18 @@ export function TaskHeading({
           onClick={onBack}
         >
           <ArrowLeft size={16} />
+          <KeyHint id="back" />
         </button>
       )}
+      <button
+        className="task-status-button"
+        aria-label={`Task status: ${statusLabels[task.status]}`}
+        title={statusLabels[task.status]}
+        disabled={busy}
+        onClick={() => show(statusOptions)}
+      >
+        <StatusIcon status={task.status} />
+      </button>
       <button
         className={`priority p${task.priority}`}
         aria-label="Task priority"
@@ -73,15 +84,6 @@ export function TaskHeading({
         onClick={() => show(priorityOptions)}
       >
         P{task.priority}
-      </button>
-      <button
-        className="task-status-button"
-        aria-label="Task status"
-        disabled={busy}
-        onClick={() => show(statusOptions)}
-      >
-        <StatusIcon status={task.status} />
-        {statusLabels[task.status]}
       </button>
       <input
         ref={title}

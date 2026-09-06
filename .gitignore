@@ -2,7 +2,7 @@
 /cadence
 /node_modules/
 /internal/web/dist/assets/
-/.worker/
+/.cadence/
 *.tmp
 /test-results/
 /playwright-report/

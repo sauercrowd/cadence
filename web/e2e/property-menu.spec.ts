@@ -8,7 +8,10 @@ test("the shared property picker sets task creation defaults, filters, and heade
 
   // Create a task, overriding priority and status via the "/" picker.
   await page.goto("/tasks");
-  await page.getByRole("button", { name: "New task", exact: true }).click();
+  await page
+    .getByRole("main")
+    .getByRole("button", { name: "New task", exact: true })
+    .click();
   const title = page.getByRole("textbox", {
     name: "What would you like to achieve?",
   });
@@ -29,8 +32,8 @@ test("the shared property picker sets task creation defaults, filters, and heade
     page.getByRole("button", { name: "Task priority", exact: true }),
   ).toHaveText("P0");
   await expect(
-    page.getByRole("button", { name: "Task status", exact: true }),
-  ).toHaveText("Focus");
+    page.getByRole("button", { name: /Task status/ }),
+  ).toHaveAttribute("aria-label", "Task status: Focus");
 
   // The workflow's goal-phase instructions travel with the document and get
   // their own editing tab, collapsed out of the way of the main spec.

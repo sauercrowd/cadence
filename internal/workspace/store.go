@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"mime"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -18,9 +20,11 @@ import (
 )
 
 var (
-	ErrNotFound    = errors.New("not found")
-	ErrConflict    = errors.New("document changed on disk")
-	ErrInvalidName = errors.New("invalid name")
+	ErrNotFound        = errors.New("not found")
+	ErrConflict        = errors.New("document changed on disk")
+	ErrInvalidName     = errors.New("invalid name")
+	ErrInvalidFileType = errors.New("unsupported file type")
+	ErrFileTooLarge    = errors.New("file too large")
 )
 
 type DocumentSummary struct {
@@ -65,7 +69,7 @@ func NewStore(projectRoot string) (*Store, error) {
 		return nil, fmt.Errorf("resolve project directory: %w", err)
 	}
 
-	workerDir := filepath.Join(root, ".worker")
+	workerDir := filepath.Join(root, ".cadence")
 	store := &Store{
 		root:     root,
 		tasksDir: filepath.Join(workerDir, "tasks"),
@@ -325,6 +329,102 @@ func (s *Store) DeleteDocument(taskID, documentID string) error {
 	return s.writeTask(task)
 }
 
+// Attachments are files dropped into a task's documents. Images and videos
+// get inline previews; everything else is served as a download. They live
+// in an assets directory beside the Markdown files so the documents stay
+// portable plain text that reference them relatively.
+var attachmentTypes = map[string]string{
+	"image/png":  ".png",
+	"image/jpeg": ".jpg",
+	"image/gif":  ".gif",
+	"image/webp": ".webp",
+	"image/svg+xml": ".svg",
+	"video/mp4":  ".mp4",
+	"video/webm": ".webm",
+	"video/ogg":  ".ogv",
+}
+
+var safeExtension = regexp.MustCompile(`^[a-z0-9]{1,10}$`)
+
+const maxAttachmentSize = 10 << 20
+
+func (s *Store) CreateAttachment(taskID, filename, contentType string, data []byte) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, err := s.readTask(taskID); err != nil {
+		return "", err
+	}
+	if len(data) == 0 || len(data) > maxAttachmentSize {
+		return "", ErrFileTooLarge
+	}
+	if err := ensureDirectory(s.assetsDir(taskID)); err != nil {
+		return "", err
+	}
+	name := uuid.NewString() + attachmentExtension(filename, contentType)
+	if err := atomicWrite(filepath.Join(s.assetsDir(taskID), name), data, 0o644); err != nil {
+		return "", fmt.Errorf("save attachment: %w", err)
+	}
+	return name, nil
+}
+
+// The stored name keeps the original extension when it is plainly one, so
+// downloads open in the right application. Otherwise the upload's content
+// type picks one, and extensionless files are served as generic downloads.
+func attachmentExtension(filename, contentType string) string {
+	base := filepath.Base(filepath.ToSlash(filename))
+	if ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(base), ".")); safeExtension.MatchString(ext) {
+		return "." + ext
+	}
+	if ext, ok := attachmentTypes[contentType]; ok {
+		return ext
+	}
+	return ""
+}
+
+func attachmentContentType(name string) string {
+	ext := strings.ToLower(filepath.Ext(name))
+	for known, candidate := range attachmentTypes {
+		if candidate == ext {
+			return known
+		}
+	}
+	if contentType := mime.TypeByExtension(ext); contentType != "" {
+		contentType, _, _ = strings.Cut(contentType, ";")
+		return contentType
+	}
+	return "application/octet-stream"
+}
+
+// ReadAttachment resolves an attachment by name, refusing anything that
+// escapes the task's assets directory.
+func (s *Store) ReadAttachment(taskID, name string) (string, []byte, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, err := s.readTask(taskID); err != nil {
+		return "", nil, err
+	}
+	if err := safeFile(s.assetsDir(taskID), name); err != nil {
+		return "", nil, err
+	}
+	data, err := os.ReadFile(filepath.Join(s.assetsDir(taskID), name))
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil, ErrNotFound
+	}
+	if err != nil {
+		return "", nil, fmt.Errorf("read attachment: %w", err)
+	}
+	return attachmentContentType(name), data, nil
+}
+
+// InlineAttachments are previewed in the document; anything else is served
+// as a download so a dropped HTML file can never render as the app itself.
+func InlineAttachment(contentType string) bool {
+	return strings.HasPrefix(contentType, "image/") ||
+		strings.HasPrefix(contentType, "video/")
+}
+
 func (s *Store) findDocument(taskID, documentID string) (Task, DocumentSummary, error) {
 	task, err := s.readTask(taskID)
 	if err != nil {
@@ -440,6 +540,10 @@ func (s *Store) writeTask(task Task) error {
 
 func (s *Store) taskDir(id string) string { return filepath.Join(s.tasksDir, id) }
 
+func (s *Store) assetsDir(taskID string) string {
+	return filepath.Join(s.taskDir(taskID), "assets")
+}
+
 func (s *Store) availableFilename(task Task, wanted, exceptID string) string {
 	used := make(map[string]bool, len(task.Documents))
 	for _, document := range task.Documents {
@@ -501,7 +605,7 @@ func revision(content []byte) string {
 
 func atomicWrite(path string, content []byte, mode os.FileMode) error {
 	dir := filepath.Dir(path)
-	temporary, err := os.CreateTemp(dir, ".worker-*.tmp")
+	temporary, err := os.CreateTemp(dir, ".cadence-*.tmp")
 	if err != nil {
 		return err
 	}

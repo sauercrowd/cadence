@@ -105,7 +105,7 @@ In the initial external-session workflow, I mark agent status as `working` when 
 
 Confirmed initial scope: run locally against one project directory at a time. The directory is the project context; an explicit project registry, project switcher, and cross-project overview can come later.
 
-Keep local file storage for the first version: task metadata in JSON and documents in Markdown inside the project's `.worker/` directory. Phase metadata and workflow settings can extend this model as needed. The existing directory name is an implementation detail, independent of the Cadence branding.
+Keep local file storage for the first version: task metadata in JSON and documents in Markdown inside the project's `.cadence/` directory. Phase metadata and workflow settings can extend this model as needed.
 
 A hosted cloud platform is a possible later direction. The first milestone is a useful local workflow; accounts, cloud sync, hosted storage, and multi-user collaboration are outside the initial scope. Keep filesystem access behind the backend API so a later storage change can be addressed without making local paths part of the frontend's product model. Detailed cloud architecture is deferred.
 

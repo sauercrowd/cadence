@@ -20,6 +20,7 @@ import {
   HorizontalRuleNode,
 } from "@lexical/react/LexicalHorizontalRuleNode";
 import type { ElementTransformer } from "@lexical/markdown";
+import { IMAGE, VIDEO, IFRAME } from "./embeds";
 
 function cells(line: string): string[] {
   return line
@@ -116,7 +117,22 @@ const RULE: ElementTransformer = {
   },
   export: (node) => ($isHorizontalRuleNode(node) ? "---" : null),
 };
-export const markdownTransformers = [TABLE, RULE, CHECK_LIST, ...TRANSFORMERS];
+export const markdownTransformers = [
+  TABLE,
+  RULE,
+  IMAGE,
+  VIDEO,
+  IFRAME,
+  CHECK_LIST,
+  ...TRANSFORMERS,
+];
+
+// Constructs the rich editor can round-trip itself: images, videos and
+// iframes get real nodes, so they no longer push a document into
+// source-only mode. The tag branches tolerate `>` inside quoted values,
+// like the transformers.
+const richConstructs =
+  /^!\[(?:\\.|[^\]])*\]\(\S+?(?:\s+"[^"]*")?\)$|^<(?:iframe|video)\s+(?:"[^"]*"|'[^']*'|[^>])*>(?:<\/(?:iframe|video)>)?$/;
 
 export function sourceOnlyReason(markdown: string): string | null {
   let fence = false;
@@ -128,11 +144,12 @@ export function sourceOnlyReason(markdown: string): string | null {
       continue;
     }
     if (fence) continue;
+    if (richConstructs.test(line.trim())) continue;
     if (
       /!\[|^\s*<[^>]+>|\[\^[^\]]+\]|^\s*\[[^\]]+\]:|^ {4}\S/.test(line) &&
       !/^\s*[-*+] /.test(line)
     )
-      return "This document contains Markdown that is preserved in source mode (HTML, images, references, or indented blocks).";
+      return "This document contains Markdown that is preserved in source mode (HTML, references, or indented blocks).";
   }
   return null;
 }

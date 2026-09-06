@@ -42,6 +42,7 @@
 
   /* --- geometry ------------------------------------------------------ */
   --r: 2px;
+  --r-logo: 5px;
   --row: 26px;
   --ctl-h: 22px;
   --ctl-pad: 3px 7px;
@@ -137,6 +138,46 @@ kbd {
   border: 1px solid var(--rule);
   border-radius: var(--r);
   padding: 0 3px;
+}
+
+/* ==========================================================================
+   Keyboard hints — nothing at rest, everything while Alt is held.
+   Absolutely positioned so revealing them never shifts the layout.
+   ========================================================================== */
+
+.key-hint {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  z-index: 2;
+  padding: 0 3px;
+  border-color: var(--signal);
+  background: var(--signal-soft);
+  color: var(--signal);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.08s;
+}
+body[data-keys="on"] .key-hint {
+  opacity: 1;
+  visibility: visible;
+}
+.sidebar-new,
+.app-sidebar nav button,
+.phase-nav-item,
+.icon-button,
+.segmented.has-hint {
+  position: relative;
+}
+.segmented.has-hint .key-hint {
+  right: -4px;
+  top: -6px;
+  transform: none;
+}
+.phase-nav-item .key-hint {
+  right: 3px;
 }
 
 .muted {
@@ -334,6 +375,15 @@ pre {
   font-family: var(--mono);
   font-size: 9px;
 }
+/* A configured workspace logo replaces the letter avatar at the same size.
+   A missing or broken file falls back to the avatar via onError. */
+.workspace-logo {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  border-radius: var(--r-logo);
+  object-fit: contain;
+}
 .sidebar-new {
   display: flex;
   align-items: center;
@@ -409,6 +459,21 @@ pre {
   font-size: var(--fs-ui);
   color: var(--faint);
   line-height: 1.5;
+}
+/* The one permanent hint that shortcuts exist, and where to learn them. */
+.sidebar-keys {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding: 4px 6px;
+  border-radius: var(--r);
+  font-size: var(--fs-ui);
+  color: var(--faint);
+}
+.sidebar-keys:hover {
+  background: var(--hover);
+  color: var(--muted);
 }
 
 .app-main {
@@ -578,6 +643,25 @@ pre {
 }
 .task-row:hover {
   background: var(--hover);
+}
+/* Keyboard cursor — a rail rather than a fill, so it reads as position
+   rather than selection. */
+.task-row {
+  position: relative;
+}
+.task-row.cursor {
+  background: var(--structure-soft);
+  box-shadow: inset 2px 0 0 var(--structure);
+}
+body[data-keys="on"] .task-row.cursor::after {
+  content: "↵";
+  position: absolute;
+  right: var(--s3);
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  color: var(--structure);
 }
 .task-title {
   display: flex;
@@ -776,13 +860,13 @@ pre {
 .task-status-button {
   display: flex;
   align-items: center;
-  gap: 5px;
-  height: 20px;
-  padding: 0 6px;
+  justify-content: center;
+  width: var(--ctl-h);
+  height: var(--ctl-h);
+  flex-shrink: 0;
+  padding: 0;
   border-radius: var(--r);
-  font-size: var(--fs-ui);
   color: var(--muted);
-  white-space: nowrap;
 }
 .task-status-button:hover:not(:disabled),
 .task-heading-line .priority:hover:not(:disabled) {
@@ -1039,9 +1123,10 @@ pre {
   padding: var(--s4) var(--gutter) 64px;
   overflow: auto;
 }
-/* Left-aligned to the same gutter as the header above it. */
+/* Centered in the pane, with the floor of --gutter kept by the padding. */
 .document-editor {
   max-width: 760px;
+  margin: 0 auto;
 }
 
 /* ==========================================================================
@@ -1095,6 +1180,11 @@ pre {
 .editor-paper {
   position: relative;
   padding-right: 26px;
+}
+/* In the centered column the marker gutter would let the toolbar rule
+   overshoot the text measure on the right. */
+.document-editor .editor-paper {
+  padding-right: 0;
 }
 .rich-editor {
   min-height: 280px;
@@ -1160,6 +1250,63 @@ pre {
   font-size: 12px;
   line-height: 1.65;
   white-space: pre-wrap;
+}
+/* Pasted images and iframe embeds render as framed blocks. The figure wrapper
+   carries no browser margin; the caption only appears when the Markdown gives
+   the embed a name. */
+.rich-editor figure {
+  margin: 0;
+}
+.embed {
+  position: relative;
+  display: block;
+  margin: var(--s4) 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--panel);
+  overflow: hidden;
+}
+.embed.selected {
+  outline: 2px solid var(--structure);
+  outline-offset: 1px;
+}
+.embed img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.embed video {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  background: var(--panel);
+}
+.embed iframe {
+  display: block;
+  width: 100%;
+  height: 360px;
+  border: 0;
+  background: var(--panel);
+}
+/* While editing and unselected, clicks land on the shield and select the
+   embed instead of handing focus to the embedded page. Selecting removes
+   the shield, so a second click interacts with the live page. */
+.embed-shield {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
+.embed-caption {
+  display: block;
+  padding: 4px var(--s2);
+  border-top: 1px solid var(--rule-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  color: var(--faint);
+  background: var(--panel);
 }
 .editor-ul,
 .editor-ol {
@@ -1490,6 +1637,55 @@ pre {
   color: var(--faint);
 }
 
+.shortcut-sheet section {
+  margin-bottom: var(--s4);
+}
+.shortcut-sheet h3 {
+  margin-bottom: 5px;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.shortcut-sheet dl {
+  display: grid;
+  margin: 0;
+}
+.shortcut-sheet dl > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  min-height: 22px;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.shortcut-sheet dl > div:last-child {
+  border-bottom: 0;
+}
+.shortcut-sheet dt {
+  font-size: var(--fs-body);
+  color: var(--ink-2);
+}
+.shortcut-sheet dd {
+  margin: 0;
+}
+.shortcut-sheet dd kbd {
+  border-color: var(--signal);
+  background: var(--signal-soft);
+  color: var(--signal);
+  font-size: 10px;
+}
+.shortcut-foot {
+  margin: 0;
+  padding-top: var(--s2);
+  border-top: 1px solid var(--rule);
+  font-size: var(--fs-ui);
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .task-switcher {
   padding: var(--s2);
 }
@@ -1641,6 +1837,13 @@ details > summary {
   padding: 64px var(--s5);
   font-size: var(--fs-ui);
   color: var(--muted);
+}
+/* Inside the document pane these states sit on the same centered measure
+   as the editor and header. */
+.document-scroll .empty-state,
+.document-scroll .loading-state {
+  max-width: 760px;
+  margin: 0 auto;
 }
 .working-spin {
   animation: rotate 1.6s linear infinite;

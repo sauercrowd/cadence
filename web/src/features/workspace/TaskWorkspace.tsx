@@ -20,6 +20,7 @@ import { DocumentEditor } from "../editor/DocumentEditor";
 import { statusLabels, StatusIcon } from "../tasks/TaskOverview";
 import { Modal } from "../../ui/Modal";
 import { navigate } from "../../app/router";
+import { KeyHint, useShortcut, useShortcutKey } from "../../app/keys";
 
 export function TaskWorkspace({
   task,
@@ -85,6 +86,38 @@ export function TaskWorkspace({
       await session.flush();
       onTask(await api.updateTask(await api.task(task.id), patch));
     });
+
+  // Phases carry visible numbers, so their numbers select them. [ and ] step
+  // through everything in the navigator, phases and supporting documents alike.
+  const order = [
+    ...task.phases.map((p) => p.documentId),
+    ...task.documents
+      .filter((d) => !task.phases.some((p) => p.documentId === d.id))
+      .map((d) => d.id),
+  ];
+  const step = (delta: number) => {
+    const at = order.indexOf(documentId);
+    const next = order[(at + delta + order.length) % order.length];
+    if (next) changeDocument(next);
+  };
+  useShortcutKey("jump-number", (key) => {
+    const phase = task.phases[Number(key) - 1];
+    if (phase) changeDocument(phase.documentId);
+  });
+  useShortcut("doc-next", () => step(1));
+  useShortcut("doc-prev", () => step(-1));
+  useShortcut("back", onBack);
+  useShortcut(
+    "make-current",
+    () => phase && update({ currentPhaseId: phase.definition.id }),
+    !!phase && phase.definition.id !== task.currentPhaseId,
+  );
+  useShortcut("edit", () =>
+    document
+      .querySelector<HTMLElement>(".rich-editor, .source-editor .cm-content")
+      ?.focus(),
+  );
+
   if (!doc)
     return (
       <div className="empty-state">
@@ -281,7 +314,9 @@ export function TaskWorkspace({
                 key={`${session.key}/${state.generation}`}
                 content={state.content}
                 showInstructions={!!phase}
+                taskId={task.id}
                 onChange={(content) => session.edit(content)}
+                onError={onError}
               />
             ) : (
               <div className="empty-state">

@@ -485,6 +485,7 @@ type WorkspaceInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	LogoPath      string                 `protobuf:"bytes,3,opt,name=logo_path,json=logoPath,proto3" json:"logo_path,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -529,6 +530,13 @@ func (x *WorkspaceInfo) GetId() string {
 func (x *WorkspaceInfo) GetName() string {
 	if x != nil {
 		return x.Name
+	}
+	return ""
+}
+
+func (x *WorkspaceInfo) GetLogoPath() string {
+	if x != nil {
+		return x.LogoPath
 	}
 	return ""
 }
@@ -1231,10 +1239,11 @@ const file_worker_v1_worker_proto_rawDesc = "" +
 	"documentIdJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06\"Z\n" +
 	"\bWorkflow\x122\n" +
 	"\x06phases\x18\x01 \x03(\v2\x1a.worker.v1.PhaseDefinitionR\x06phases\x12\x1a\n" +
-	"\brevision\x18\x02 \x01(\tR\brevision\"3\n" +
+	"\brevision\x18\x02 \x01(\tR\brevision\"P\n" +
 	"\rWorkspaceInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"\xc6\x02\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
+	"\tlogo_path\x18\x03 \x01(\tR\blogoPath\"\xc6\x02\n" +
 	"\x11UpdateTaskRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\brevision\x18\x02 \x01(\tR\brevision\x12\x12\n" +

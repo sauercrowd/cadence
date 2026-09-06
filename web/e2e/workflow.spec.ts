@@ -1,9 +1,11 @@
 import { test, expect, type Page } from "@playwright/test";
 
 async function setTaskStatus(page: Page, status: string) {
-  await page.getByRole("button", { name: "Task status", exact: true }).click();
-  await page.getByRole("option", { name: status[0].toUpperCase() + status.slice(1), exact: true }).click();
-  await expect(page.getByRole("button", { name: "Task status", exact: true })).toHaveText(status[0].toUpperCase() + status.slice(1));
+  const label = status[0].toUpperCase() + status.slice(1);
+  const button = page.getByRole("button", { name: /Task status/ });
+  await button.click();
+  await page.getByRole("option", { name: label, exact: true }).click();
+  await expect(button).toHaveAttribute("aria-label", `Task status: ${label}`);
 }
 async function createTask(page: Page, title: string) {
   await page.goto("/tasks");

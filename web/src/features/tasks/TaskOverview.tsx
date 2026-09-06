@@ -1,8 +1,9 @@
 import { TaskFilter } from "./TaskFilter";
-import { useEffect } from "react";
+import { useRef, useState } from "react";
 import { Check, Bot, List, Columns3, Plus, CircleDot } from "lucide-react";
 import type { Task } from "../../data/api";
 import { setQuery } from "../../app/router";
+import { KeyHint, useShortcut } from "../../app/keys";
 import { statusLabels, StatusIcon } from "./status";
 
 export { statusLabels, StatusIcon };
@@ -55,32 +56,6 @@ export function TaskOverview({
     priority = route.searchParams.get("priority") || "",
     phase = route.searchParams.get("phase") || "";
   const scoped = tasks;
-  useEffect(() => {
-    const shortcut = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement;
-      if (
-        event.ctrlKey ||
-        event.metaKey ||
-        event.altKey ||
-        target.isContentEditable ||
-        ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) ||
-        document.querySelector("dialog[open]")
-      )
-        return;
-      if (event.key.toLowerCase() === "f") {
-        event.preventDefault();
-        document
-          .querySelector<HTMLInputElement>('[aria-label="Filter tasks"]')
-          ?.focus();
-      }
-      if (event.key.toLowerCase() === "v") {
-        event.preventDefault();
-        setQuery("view", board ? "list" : "board");
-      }
-    };
-    window.addEventListener("keydown", shortcut);
-    return () => window.removeEventListener("keydown", shortcut);
-  }, [board]);
   const filtered = scoped
     .filter(
       (t) =>
@@ -99,6 +74,31 @@ export function TaskOverview({
         b.updatedAt - a.updatedAt ||
         a.id.localeCompare(b.id),
     );
+  // Row cursor: j/k walk the list, Enter opens. List view only — the board
+  // is spatial, so a linear cursor would lie about where you are.
+  const [cursor, setCursor] = useState(0);
+  const rows = useRef<HTMLDivElement>(null);
+  const at = Math.min(cursor, Math.max(0, filtered.length - 1));
+  const move = (delta: number) =>
+    setCursor((c) => {
+      const next = Math.min(
+        Math.max(0, Math.min(c, filtered.length - 1) + delta),
+        filtered.length - 1,
+      );
+      rows.current
+        ?.querySelectorAll(".task-row")
+        [next]?.scrollIntoView({ block: "nearest" });
+      return next;
+    });
+  useShortcut("toggle-view", () => setQuery("view", board ? "list" : "board"));
+  useShortcut("row-next", () => move(1), !board && filtered.length > 0);
+  useShortcut("row-prev", () => move(-1), !board && filtered.length > 0);
+  useShortcut(
+    "row-open",
+    () => filtered[at] && onOpen(filtered[at]),
+    !board && filtered.length > 0,
+  );
+
   const phases = new Map<string, string>();
   tasks.forEach((t) =>
     t.phases.forEach((p) => phases.set(p.definition.id, p.definition.name)),
@@ -140,7 +140,8 @@ export function TaskOverview({
       </header>
       <div className="overview-toolbar">
         <TaskFilter route={route} phases={phases} />
-        <div className="segmented">
+        <div className="segmented has-hint">
+          <KeyHint id="toggle-view" />
           <button
             aria-label="List view"
             aria-pressed={!board}
@@ -216,14 +217,17 @@ export function TaskOverview({
           ))}
         </div>
       ) : (
-        <div className="task-table">
+        <div className="task-table" ref={rows}>
           <div className="table-heading">
             <span>Pri</span>
             <span>Task</span>
             <span>Status</span>
           </div>
-          {filtered.map((t) => (
-            <div className="task-row" key={t.id}>
+          {filtered.map((t, i) => (
+            <div
+              className={`task-row ${i === at ? "cursor" : ""}`}
+              key={t.id}
+            >
               <span className={`priority p${t.priority}`}>P{t.priority}</span>
               <button className="task-title" onClick={() => onOpen(t)}>
                 <StatusIcon status={t.status} />

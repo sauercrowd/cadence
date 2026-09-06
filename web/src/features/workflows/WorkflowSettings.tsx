@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Save, Trash2 } from "lucide-react";
 import { api, type PhaseDefinition } from "../../data/api";
+import { useShortcutKey } from "../../app/keys";
 import { z } from "zod";
 
 const workflowSchema = z
@@ -63,6 +64,11 @@ export function WorkflowSettings({
   }, [dirty]);
   const index = phases.findIndex((p) => p.id === selected);
   const phase = phases[index];
+  // The list is numbered, so its numbers select it.
+  useShortcutKey("jump-number", (key) => {
+    const target = phases[Number(key) - 1];
+    if (target) setSelected(target.id);
+  });
   function update(patch: Partial<PhaseDefinition>) {
     setPhases((current) =>
       current.map((p) => (p.id === selected ? { ...p, ...patch } : p)),

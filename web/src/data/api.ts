@@ -117,6 +117,19 @@ export const api = {
     workspaceClient.updateDocument({ taskId, documentId, content, revision }),
   createDocument: (taskId: string, name: string) =>
     workspaceClient.createDocument({ taskId, name }),
+  uploadAttachment: async (taskId: string, file: File) => {
+    const response = await fetch(`/api/tasks/${taskId}/attachments`, {
+      method: "POST",
+      headers: {
+        "Content-Type": file.type || "application/octet-stream",
+        "X-Filename": encodeURIComponent(file.name),
+      },
+      body: file,
+    });
+    if (!response.ok)
+      throw new Error(`Could not save the image (${response.status}).`);
+    return (await response.json()) as { name: string };
+  },
   workflow: () => workspaceClient.getWorkflow({}),
   updateWorkflow: (phases: PhaseDefinition[], revision: string) =>
     workspaceClient.updateWorkflow({ workflow: { phases }, revision }),

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -65,6 +67,13 @@ func (s *Store) initialize() error {
 	if _, err := uuid.Parse(s.info.ID); err != nil {
 		return fmt.Errorf("invalid workspace identity")
 	}
+	// A misconfigured logo must not fail startup — the UI falls back to the
+	// letter avatar — but it should not fail silently either.
+	if s.info.LogoPath != "" {
+		if _, _, err := s.workspaceLogo(); err != nil {
+			log.Printf("workspace logo %q ignored: %v", s.info.LogoPath, err)
+		}
+	}
 	if err := safeFile(dir, "workflow.json"); err != nil {
 		return err
 	}
@@ -78,6 +87,49 @@ func (s *Store) initialize() error {
 	return err
 }
 func (s *Store) Info() WorkspaceInfo { return s.info }
+
+// WorkspaceLogo resolves the configured logoPath against the project root.
+// Anything absolute, escaping the root, or not an image is refused so a
+// hand-edited workspace.json cannot turn the logo endpoint into a file read.
+func (s *Store) WorkspaceLogo() (string, []byte, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.workspaceLogo()
+}
+
+func (s *Store) workspaceLogo() (string, []byte, error) {
+	logo := s.info.LogoPath
+	if logo == "" || filepath.IsAbs(logo) {
+		return "", nil, ErrNotFound
+	}
+	for _, part := range strings.Split(filepath.ToSlash(logo), "/") {
+		if part == ".." {
+			return "", nil, ErrNotFound
+		}
+	}
+	path := filepath.Join(s.root, logo)
+	if relative, err := filepath.Rel(s.root, path); err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return "", nil, ErrNotFound
+	}
+	if info, err := os.Lstat(path); err != nil || !info.Mode().IsRegular() {
+		return "", nil, ErrNotFound
+	}
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil, ErrNotFound
+	}
+	if err != nil {
+		return "", nil, fmt.Errorf("read workspace logo: %w", err)
+	}
+	contentType := http.DetectContentType(data)
+	if strings.HasSuffix(strings.ToLower(s.info.LogoPath), ".svg") {
+		contentType = "image/svg+xml"
+	}
+	if !strings.HasPrefix(contentType, "image/") {
+		return "", nil, fmt.Errorf("%w: workspace logo must be an image", ErrInvalidFileType)
+	}
+	return contentType, data, nil
+}
 func (s *Store) readWorkflow() (Workflow, error) {
 	dir := filepath.Dir(s.tasksDir)
 	if err := safeFile(dir, "workflow.json"); err != nil {

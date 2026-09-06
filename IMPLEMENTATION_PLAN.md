@@ -181,7 +181,7 @@ Use Floating UI for positioning, viewport collision handling, and pointer moveme
 Extend the file store; no database is needed. New paths are proposed as:
 
 ```text
-.worker/
+.cadence/
   workspace.json                 schema version and stable workspace ID
   workflow.json                  current default workflow template
   tasks/<task-id>/

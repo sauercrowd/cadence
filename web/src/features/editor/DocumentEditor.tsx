@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   $createParagraphNode,
+  $createTextNode,
   $getSelection,
   $isRangeSelection,
   $getRoot,
   $setSelection,
+  COMMAND_PRIORITY_HIGH,
   FORMAT_TEXT_COMMAND,
   UNDO_COMMAND,
   REDO_COMMAND,
@@ -16,7 +18,11 @@ import {
 import { LexicalExtensionComposer } from "@lexical/react/LexicalExtensionComposer";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { RichTextExtension, $createHeadingNode } from "@lexical/rich-text";
+import {
+  RichTextExtension,
+  $createHeadingNode,
+  DRAG_DROP_PASTE,
+} from "@lexical/rich-text";
 import { HistoryExtension } from "@lexical/history";
 import {
   ListExtension,
@@ -52,6 +58,7 @@ import {
   Link,
   MessageSquarePlus,
   Table,
+  Frame,
   Undo2,
   Redo2,
 } from "lucide-react";
@@ -68,14 +75,18 @@ import {
   anchorRect,
 } from "./anchors";
 import { markdownTransformers, sourceOnlyReason } from "./markdown";
+import { EmbedNode, $createEmbedNode, embedContext } from "./embeds";
 import { ThreadOverlay } from "./ThreadOverlay";
 import { SourceEditor } from "./SourceEditor";
+import { api } from "../../data/api";
 
 type Props = {
   content: string;
   onChange: (content: string) => void;
+  onError?: (error: unknown) => void;
   cacheKey?: string;
   showInstructions?: boolean;
+  taskId?: string;
 };
 const editorCache = new Map<string, { content: string; state: EditorState }>();
 const theme = {
@@ -106,10 +117,14 @@ const theme = {
 export function DocumentEditor({
   content,
   onChange,
+  onError,
   cacheKey,
   showInstructions = true,
+  taskId = "",
 }: Props) {
   const parsed = useMemo(() => parseFile(content), []);
+  // Relative attachment paths in the document resolve against this task.
+  embedContext.taskId = taskId;
   const [mode, setMode] = useState<"spec" | "instructions" | "source">(
     parsed.error || sourceOnlyReason(parsed.body) ? "source" : "spec",
   );
@@ -175,14 +190,16 @@ export function DocumentEditor({
           key={`rich-${generation}`}
           content={latest.current}
           onChange={update}
+          onError={onError}
           cacheKey={cacheKey}
+          taskId={taskId}
         />
       )}
     </div>
   );
 }
 
-function RichEditor({ content, onChange, cacheKey }: Props) {
+function RichEditor({ content, onChange, onError, cacheKey, taskId }: Props) {
   const initial = useMemo(() => parseFile(content), []);
   const extension = useMemo(() => {
     const cached = cacheKey ? editorCache.get(cacheKey) : undefined;
@@ -202,7 +219,7 @@ function RichEditor({ content, onChange, cacheKey }: Props) {
           hasCellBackgroundColor: false,
         }),
       ],
-      nodes: [CodeNode, HorizontalRuleNode],
+      nodes: [CodeNode, HorizontalRuleNode, EmbedNode],
       $initialEditorState:
         cached?.content === content
           ? cached.state.clone()
@@ -221,7 +238,9 @@ function RichEditor({ content, onChange, cacheKey }: Props) {
         initial={initial}
         content={content}
         cacheKey={cacheKey}
+        taskId={taskId}
         onChange={onChange}
+        onError={onError}
       />
     </LexicalExtensionComposer>
   );
@@ -230,8 +249,10 @@ function RichEditor({ content, onChange, cacheKey }: Props) {
 function EditorSurface({
   initial,
   onChange,
+  onError,
   content,
   cacheKey,
+  taskId = "",
 }: Props & { initial: ReturnType<typeof parseFile> }) {
   const [editor] = useLexicalComposerContext();
   const [threads, setThreads] = useState(initial.threads),
@@ -313,6 +334,49 @@ function EditorSurface({
       nestedMarks();
     };
   }, [editor]);
+  // Pasted or dropped files are saved as task attachments first, then
+  // embedded by name so the Markdown stays portable. Images and videos get
+  // preview blocks; anything else becomes an attachment link.
+  useEffect(() => {
+    if (!taskId) return;
+    return editor.registerCommand(
+      DRAG_DROP_PASTE,
+      (files) => {
+        if (!files.length) return false;
+        for (const file of files) {
+          void api
+            .uploadAttachment(taskId, file)
+            .then(({ name }) =>
+              editor.update(() => {
+                const kind = file.type.startsWith("image/")
+                  ? "image"
+                  : file.type.startsWith("video/")
+                    ? "video"
+                    : null;
+                const selection = $getSelection();
+                if (kind) {
+                  const node = $createEmbedNode(kind, name);
+                  if ($isRangeSelection(selection))
+                    selection.insertNodes([node]);
+                  else $getRoot().append(node);
+                  return;
+                }
+                const link = `[${file.name.replace(/\]/g, "\\]")}](${name})`;
+                if ($isRangeSelection(selection)) selection.insertText(link);
+                else {
+                  const paragraph = $createParagraphNode();
+                  paragraph.append($createTextNode(link));
+                  $getRoot().append(paragraph);
+                }
+              }),
+            )
+            .catch((error) => onError?.(error));
+        }
+        return true;
+      },
+      COMMAND_PRIORITY_HIGH,
+    );
+  }, [editor, taskId, onError]);
   useEffect(() => {
     measure();
     const observer = new ResizeObserver(measure);
@@ -464,6 +528,24 @@ function EditorSurface({
           }}
         >
           <Link size={14} />
+        </button>
+        <button
+          aria-label="Embed iframe"
+          title="Embed iframe"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            const url = window.prompt("Embed URL (https://…)");
+            if (url && /^https?:\/\//i.test(url))
+              editor.update(() => {
+                const node = $createEmbedNode("iframe", url);
+                const selection = $getSelection();
+                if ($isRangeSelection(selection))
+                  selection.insertNodes([node]);
+                else $getRoot().append(node);
+              });
+          }}
+        >
+          <Frame size={14} />
         </button>
         <i />
         <button
