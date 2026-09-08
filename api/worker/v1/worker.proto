@@ -27,11 +27,17 @@ message Task {
   string current_phase_id = 10;
   repeated TaskPhase phases = 11;
   string revision = 12;
+  int32 number = 13;
+  repeated Subtask subtasks = 14;
 }
+
+message Subtask { int32 number = 1; string phase_id = 2; string document_id = 3; string name = 4; bool done = 5; }
+message CreateSubtaskRequest { string task_id = 1; string phase_id = 2; string name = 3; string revision = 4; }
+message UpdateSubtaskRequest { string task_id = 1; int32 number = 2; bool done = 3; string revision = 4; }
 
 enum TaskStatus { TASK_STATUS_UNSPECIFIED = 0; TASK_STATUS_OPEN = 1; TASK_STATUS_FOCUS = 2; TASK_STATUS_DONE = 3; TASK_STATUS_ARCHIVED = 4; }
 enum AgentStatus { AGENT_STATUS_NONE = 0; AGENT_STATUS_WORKING = 1; }
-message PhaseDefinition { string id = 1; string name = 2; reserved 3, 5, 7, 8; string mode = 4; string document_template = 6; }
+message PhaseDefinition { string id = 1; string name = 2; reserved 3, 5, 7, 8; string mode = 4; string document_template = 6; int32 number = 9; }
 message TaskPhase { PhaseDefinition definition = 1; string document_id = 2; reserved 3, 4, 5; }
 message Workflow { repeated PhaseDefinition phases = 1; string revision = 2; }
 message WorkspaceInfo { string id = 1; string name = 2; string logo_path = 3; }
@@ -89,6 +95,8 @@ message UpdateDocumentRequest {
 }
 
 service WorkspaceService {
+  rpc CreateSubtask(CreateSubtaskRequest) returns (Task) {}
+  rpc UpdateSubtask(UpdateSubtaskRequest) returns (Task) {}
   rpc GetWorkspace(google.protobuf.Empty) returns (WorkspaceInfo) { option idempotency_level = NO_SIDE_EFFECTS; }
   rpc GetTask(TaskRequest) returns (Task) { option idempotency_level = NO_SIDE_EFFECTS; }
   rpc UpdateTask(UpdateTaskRequest) returns (Task) {}

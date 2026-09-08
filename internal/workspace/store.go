@@ -17,6 +17,8 @@ import (
 	"unicode"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var (
@@ -34,8 +36,10 @@ type DocumentSummary struct {
 }
 
 type Task struct {
+	Subtasks       []Subtask         `json:"subtasks,omitempty"`
 	SchemaVersion  int               `json:"schemaVersion"`
 	ID             string            `json:"id"`
+	Number         int               `json:"number"`
 	Name           string            `json:"name"`
 	Documents      []DocumentSummary `json:"documents"`
 	CreatedAt      time.Time         `json:"createdAt"`
@@ -61,6 +65,7 @@ type Store struct {
 	trashDir string
 	mu       sync.Mutex
 	info     WorkspaceInfo
+	db       *gorm.DB
 }
 
 func NewStore(projectRoot string) (*Store, error) {
@@ -83,6 +88,9 @@ func NewStore(projectRoot string) (*Store, error) {
 	if err := store.initialize(); err != nil {
 		return nil, err
 	}
+	if err := store.openDatabase(); err != nil {
+		return nil, err
+	}
 	return store, nil
 }
 
@@ -92,17 +100,14 @@ func (s *Store) ListTasks() ([]Task, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	entries, err := os.ReadDir(s.tasksDir)
+	entries, err := s.taskIDs()
 	if err != nil {
 		return nil, fmt.Errorf("list tasks: %w", err)
 	}
 
 	tasks := make([]Task, 0, len(entries))
 	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		task, err := s.readTask(entry.Name())
+		task, err := s.readTask(entry)
 		if err != nil {
 			return nil, err
 		}
@@ -117,19 +122,16 @@ func (s *Store) ListTasks() ([]Task, error) {
 func (s *Store) ListTasksWithErrors() ([]Task, []string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	entries, err := os.ReadDir(s.tasksDir)
+	entries, err := s.taskIDs()
 	if err != nil {
 		return nil, nil, err
 	}
 	tasks := []Task{}
 	warnings := []string{}
 	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		task, err := s.readTask(entry.Name())
+		task, err := s.readTask(entry)
 		if err != nil {
-			warnings = append(warnings, fmt.Sprintf("%s: %s", entry.Name(), err))
+			warnings = append(warnings, fmt.Sprintf("%s: %s", entry, err))
 			continue
 		}
 		tasks = append(tasks, task)
@@ -164,7 +166,7 @@ func (s *Store) CreateTask(name string) (Task, error) {
 	if err := s.initializePhases(&task, workflow); err != nil {
 		return Task{}, err
 	}
-	if err := s.writeTask(task); err != nil {
+	if err := s.db.Transaction(func(tx *gorm.DB) error { return insertTask(tx, &task) }); err != nil {
 		return Task{}, err
 	}
 	return s.readTask(task.ID)
@@ -183,7 +185,10 @@ func (s *Store) RenameTask(id, name string) (Task, error) {
 		return Task{}, err
 	}
 	task.UpdatedAt = time.Now().UTC()
-	return task, s.writeTask(task)
+	if err := s.writeTask(task); err != nil {
+		return Task{}, err
+	}
+	return s.readTask(id)
 }
 
 func (s *Store) DeleteTask(id string) error {
@@ -194,10 +199,28 @@ func (s *Store) DeleteTask(id string) error {
 		return err
 	}
 	target := filepath.Join(s.trashDir, fmt.Sprintf("task-%s-%d", id, time.Now().UnixNano()))
-	if err := os.Rename(s.taskDir(id), target); err != nil {
-		return fmt.Errorf("move task to trash: %w", err)
+	// Preserve the Markdown directory and metadata snapshot for recovery.
+	task, err := s.loadTask(id)
+	if err != nil {
+		return err
 	}
-	return nil
+	raw, _ := json.MarshalIndent(task, "", "  ")
+	if err := atomicWrite(filepath.Join(s.taskDir(id), "task.json"), raw, 0o644); err != nil {
+		return err
+	}
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&taskRecord{}).Where("id = ? AND revision = ? AND deleted = ?", id, task.Revision, false).Update("deleted", true)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return ErrConflict
+		}
+		if err := os.Rename(s.taskDir(id), target); err != nil {
+			return fmt.Errorf("move task to trash: %w", err)
+		}
+		return nil
+	})
 }
 
 func (s *Store) CreateDocument(taskID, name string) (Document, error) {
@@ -313,6 +336,11 @@ func (s *Store) DeleteDocument(taskID, documentID string) error {
 			return fmt.Errorf("%w: phase documents cannot be deleted", ErrInvalidName)
 		}
 	}
+	for _, step := range task.Subtasks {
+		if step.DocumentID == documentID {
+			return fmt.Errorf("%w: subtask documents cannot be deleted", ErrInvalidName)
+		}
+	}
 	source := filepath.Join(s.taskDir(taskID), summary.Filename)
 	target := filepath.Join(s.trashDir, fmt.Sprintf("document-%s-%s-%d.md", taskID, documentID, time.Now().UnixNano()))
 	if err := os.Rename(source, target); err != nil {
@@ -334,14 +362,14 @@ func (s *Store) DeleteDocument(taskID, documentID string) error {
 // in an assets directory beside the Markdown files so the documents stay
 // portable plain text that reference them relatively.
 var attachmentTypes = map[string]string{
-	"image/png":  ".png",
-	"image/jpeg": ".jpg",
-	"image/gif":  ".gif",
-	"image/webp": ".webp",
+	"image/png":     ".png",
+	"image/jpeg":    ".jpg",
+	"image/gif":     ".gif",
+	"image/webp":    ".webp",
 	"image/svg+xml": ".svg",
-	"video/mp4":  ".mp4",
-	"video/webm": ".webm",
-	"video/ogg":  ".ogv",
+	"video/mp4":     ".mp4",
+	"video/webm":    ".webm",
+	"video/ogg":     ".ogv",
 }
 
 var safeExtension = regexp.MustCompile(`^[a-z0-9]{1,10}$`)
@@ -464,30 +492,13 @@ func (s *Store) readTask(id string) (Task, error) {
 	if err := safeFile(s.tasksDir, id); err != nil {
 		return Task{}, err
 	}
-	if err := safeFile(s.taskDir(id), "task.json"); err != nil {
-		return Task{}, err
-	}
-	data, err := os.ReadFile(filepath.Join(s.taskDir(id), "task.json"))
-	if errors.Is(err, os.ErrNotExist) {
-		return Task{}, ErrNotFound
-	}
+	task, err := s.loadTask(id)
 	if err != nil {
-		return Task{}, fmt.Errorf("read task: %w", err)
-	}
-	var task Task
-	if err := json.Unmarshal(data, &task); err != nil {
-		return Task{}, fmt.Errorf("decode task %s: %w", id, err)
-	}
-	if task.ID != id {
-		return Task{}, fmt.Errorf("task directory and manifest IDs do not match")
-	}
-	if task.SchemaVersion != 1 {
-		return Task{}, fmt.Errorf("unsupported task schema for %s", id)
+		return Task{}, err
 	}
 	if err := validateTask(task); err != nil {
 		return Task{}, err
 	}
-	task.Revision = revision(data)
 	workflow, err := s.readWorkflow()
 	if err != nil {
 		return Task{}, err
@@ -496,48 +507,53 @@ func (s *Store) readTask(id string) (Task, error) {
 	if err != nil {
 		return Task{}, err
 	}
-	if !changed {
-		return synced, nil
+	if changed {
+		synced.UpdatedAt = time.Now().UTC()
+		if err := s.writeTask(synced); err != nil {
+			return Task{}, err
+		}
+		synced.Revision = taskRevision(synced)
 	}
-	synced.UpdatedAt = time.Now().UTC()
-	if err := s.writeTask(synced); err != nil {
-		return Task{}, err
-	}
-	data, err = os.ReadFile(filepath.Join(s.taskDir(id), "task.json"))
-	if err != nil {
-		return Task{}, fmt.Errorf("read task: %w", err)
-	}
-	synced.Revision = revision(data)
 	return synced, nil
 }
-
 func (s *Store) writeTask(task Task) error {
 	if err := validateTask(task); err != nil {
 		return err
 	}
-	path := filepath.Join(s.taskDir(task.ID), "task.json")
-	if err := safeFile(s.taskDir(task.ID), "task.json"); err != nil {
-		return err
-	}
-	if old, err := os.ReadFile(path); err == nil {
-		if task.Revision != "" && revision(old) != task.Revision {
-			return ErrConflict
-		}
-		if err := s.backup(task.ID, "task-"+revision(old)+".json", old); err != nil {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		var old taskRecord
+		if err := tx.First(&old, "id = ? AND deleted = ?", task.ID, false).Error; err != nil {
 			return err
 		}
-	}
-	data, err := json.MarshalIndent(task, "", "  ")
-	if err != nil {
-		return fmt.Errorf("encode task: %w", err)
-	}
-	data = append(data, '\n')
-	if err := atomicWrite(filepath.Join(s.taskDir(task.ID), "task.json"), data, 0o644); err != nil {
-		return fmt.Errorf("write task: %w", err)
-	}
-	return nil
+		if task.Revision == "" || old.Revision != task.Revision || old.Number != task.Number {
+			return ErrConflict
+		}
+		// Back up the previous metadata and child records in the same transaction.
+		var docs []documentRecord
+		var phases []taskPhaseRecord
+		if err := tx.Where("task_id = ?", task.ID).Find(&docs).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("task_id = ?", task.ID).Find(&phases).Error; err != nil {
+			return err
+		}
+		old.Documents = docs
+		old.Phases = phases
+		raw, _ := json.Marshal(old)
+		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&historyRecord{Kind: "task", ID: task.ID, Revision: old.Revision, Content: raw}).Error; err != nil {
+			return err
+		}
+		r := recordForTask(task)
+		result := tx.Model(&taskRecord{}).Where("id = ? AND revision = ? AND deleted = ?", task.ID, task.Revision, false).Select("name", "status", "priority", "agent_status", "current_phase_id", "updated_at", "revision").Updates(&r)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return ErrConflict
+		}
+		return writeTaskChildren(tx, task)
+	})
 }
-
 func (s *Store) taskDir(id string) string { return filepath.Join(s.tasksDir, id) }
 
 func (s *Store) assetsDir(taskID string) string {

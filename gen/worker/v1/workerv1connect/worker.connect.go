@@ -34,6 +34,12 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// WorkspaceServiceCreateSubtaskProcedure is the fully-qualified name of the WorkspaceService's
+	// CreateSubtask RPC.
+	WorkspaceServiceCreateSubtaskProcedure = "/worker.v1.WorkspaceService/CreateSubtask"
+	// WorkspaceServiceUpdateSubtaskProcedure is the fully-qualified name of the WorkspaceService's
+	// UpdateSubtask RPC.
+	WorkspaceServiceUpdateSubtaskProcedure = "/worker.v1.WorkspaceService/UpdateSubtask"
 	// WorkspaceServiceGetWorkspaceProcedure is the fully-qualified name of the WorkspaceService's
 	// GetWorkspace RPC.
 	WorkspaceServiceGetWorkspaceProcedure = "/worker.v1.WorkspaceService/GetWorkspace"
@@ -80,6 +86,8 @@ const (
 
 // WorkspaceServiceClient is a client for the worker.v1.WorkspaceService service.
 type WorkspaceServiceClient interface {
+	CreateSubtask(context.Context, *connect.Request[v1.CreateSubtaskRequest]) (*connect.Response[v1.Task], error)
+	UpdateSubtask(context.Context, *connect.Request[v1.UpdateSubtaskRequest]) (*connect.Response[v1.Task], error)
 	GetWorkspace(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.WorkspaceInfo], error)
 	GetTask(context.Context, *connect.Request[v1.TaskRequest]) (*connect.Response[v1.Task], error)
 	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.Task], error)
@@ -107,6 +115,18 @@ func NewWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, op
 	baseURL = strings.TrimRight(baseURL, "/")
 	workspaceServiceMethods := v1.File_worker_v1_worker_proto.Services().ByName("WorkspaceService").Methods()
 	return &workspaceServiceClient{
+		createSubtask: connect.NewClient[v1.CreateSubtaskRequest, v1.Task](
+			httpClient,
+			baseURL+WorkspaceServiceCreateSubtaskProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("CreateSubtask")),
+			connect.WithClientOptions(opts...),
+		),
+		updateSubtask: connect.NewClient[v1.UpdateSubtaskRequest, v1.Task](
+			httpClient,
+			baseURL+WorkspaceServiceUpdateSubtaskProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("UpdateSubtask")),
+			connect.WithClientOptions(opts...),
+		),
 		getWorkspace: connect.NewClient[emptypb.Empty, v1.WorkspaceInfo](
 			httpClient,
 			baseURL+WorkspaceServiceGetWorkspaceProcedure,
@@ -201,6 +221,8 @@ func NewWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, op
 
 // workspaceServiceClient implements WorkspaceServiceClient.
 type workspaceServiceClient struct {
+	createSubtask  *connect.Client[v1.CreateSubtaskRequest, v1.Task]
+	updateSubtask  *connect.Client[v1.UpdateSubtaskRequest, v1.Task]
 	getWorkspace   *connect.Client[emptypb.Empty, v1.WorkspaceInfo]
 	getTask        *connect.Client[v1.TaskRequest, v1.Task]
 	updateTask     *connect.Client[v1.UpdateTaskRequest, v1.Task]
@@ -215,6 +237,16 @@ type workspaceServiceClient struct {
 	renameDocument *connect.Client[v1.RenameDocumentRequest, v1.Document]
 	updateDocument *connect.Client[v1.UpdateDocumentRequest, v1.Document]
 	deleteDocument *connect.Client[v1.DocumentRequest, emptypb.Empty]
+}
+
+// CreateSubtask calls worker.v1.WorkspaceService.CreateSubtask.
+func (c *workspaceServiceClient) CreateSubtask(ctx context.Context, req *connect.Request[v1.CreateSubtaskRequest]) (*connect.Response[v1.Task], error) {
+	return c.createSubtask.CallUnary(ctx, req)
+}
+
+// UpdateSubtask calls worker.v1.WorkspaceService.UpdateSubtask.
+func (c *workspaceServiceClient) UpdateSubtask(ctx context.Context, req *connect.Request[v1.UpdateSubtaskRequest]) (*connect.Response[v1.Task], error) {
+	return c.updateSubtask.CallUnary(ctx, req)
 }
 
 // GetWorkspace calls worker.v1.WorkspaceService.GetWorkspace.
@@ -289,6 +321,8 @@ func (c *workspaceServiceClient) DeleteDocument(ctx context.Context, req *connec
 
 // WorkspaceServiceHandler is an implementation of the worker.v1.WorkspaceService service.
 type WorkspaceServiceHandler interface {
+	CreateSubtask(context.Context, *connect.Request[v1.CreateSubtaskRequest]) (*connect.Response[v1.Task], error)
+	UpdateSubtask(context.Context, *connect.Request[v1.UpdateSubtaskRequest]) (*connect.Response[v1.Task], error)
 	GetWorkspace(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.WorkspaceInfo], error)
 	GetTask(context.Context, *connect.Request[v1.TaskRequest]) (*connect.Response[v1.Task], error)
 	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.Task], error)
@@ -312,6 +346,18 @@ type WorkspaceServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	workspaceServiceMethods := v1.File_worker_v1_worker_proto.Services().ByName("WorkspaceService").Methods()
+	workspaceServiceCreateSubtaskHandler := connect.NewUnaryHandler(
+		WorkspaceServiceCreateSubtaskProcedure,
+		svc.CreateSubtask,
+		connect.WithSchema(workspaceServiceMethods.ByName("CreateSubtask")),
+		connect.WithHandlerOptions(opts...),
+	)
+	workspaceServiceUpdateSubtaskHandler := connect.NewUnaryHandler(
+		WorkspaceServiceUpdateSubtaskProcedure,
+		svc.UpdateSubtask,
+		connect.WithSchema(workspaceServiceMethods.ByName("UpdateSubtask")),
+		connect.WithHandlerOptions(opts...),
+	)
 	workspaceServiceGetWorkspaceHandler := connect.NewUnaryHandler(
 		WorkspaceServiceGetWorkspaceProcedure,
 		svc.GetWorkspace,
@@ -403,6 +449,10 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 	)
 	return "/worker.v1.WorkspaceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case WorkspaceServiceCreateSubtaskProcedure:
+			workspaceServiceCreateSubtaskHandler.ServeHTTP(w, r)
+		case WorkspaceServiceUpdateSubtaskProcedure:
+			workspaceServiceUpdateSubtaskHandler.ServeHTTP(w, r)
 		case WorkspaceServiceGetWorkspaceProcedure:
 			workspaceServiceGetWorkspaceHandler.ServeHTTP(w, r)
 		case WorkspaceServiceGetTaskProcedure:
@@ -439,6 +489,14 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 
 // UnimplementedWorkspaceServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedWorkspaceServiceHandler struct{}
+
+func (UnimplementedWorkspaceServiceHandler) CreateSubtask(context.Context, *connect.Request[v1.CreateSubtaskRequest]) (*connect.Response[v1.Task], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("worker.v1.WorkspaceService.CreateSubtask is not implemented"))
+}
+
+func (UnimplementedWorkspaceServiceHandler) UpdateSubtask(context.Context, *connect.Request[v1.UpdateSubtaskRequest]) (*connect.Response[v1.Task], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("worker.v1.WorkspaceService.UpdateSubtask is not implemented"))
+}
 
 func (UnimplementedWorkspaceServiceHandler) GetWorkspace(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.WorkspaceInfo], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("worker.v1.WorkspaceService.GetWorkspace is not implemented"))

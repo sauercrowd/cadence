@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"log"
 	"net/http"
 	"os"
@@ -74,17 +76,7 @@ func (s *Store) initialize() error {
 			log.Printf("workspace logo %q ignored: %v", s.info.LogoPath, err)
 		}
 	}
-	if err := safeFile(dir, "workflow.json"); err != nil {
-		return err
-	}
-	if _, err := os.Stat(filepath.Join(dir, "workflow.json")); errors.Is(err, os.ErrNotExist) {
-		data, _ = json.MarshalIndent(defaultWorkflow(), "", "  ")
-		return atomicWrite(filepath.Join(dir, "workflow.json"), data, 0o644)
-	} else if err != nil {
-		return err
-	}
-	_, err = s.readWorkflow()
-	return err
+	return nil
 }
 func (s *Store) Info() WorkspaceInfo { return s.info }
 
@@ -131,23 +123,19 @@ func (s *Store) workspaceLogo() (string, []byte, error) {
 	return contentType, data, nil
 }
 func (s *Store) readWorkflow() (Workflow, error) {
-	dir := filepath.Dir(s.tasksDir)
-	if err := safeFile(dir, "workflow.json"); err != nil {
+	var state workflowRecord
+	if err := s.db.First(&state, 1).Error; err != nil {
 		return Workflow{}, err
 	}
-	data, err := os.ReadFile(filepath.Join(dir, "workflow.json"))
-	if err != nil {
+	var records []phaseRecord
+	if err := s.db.Where("active = ?", true).Order("position").Find(&records).Error; err != nil {
 		return Workflow{}, err
 	}
-	var result Workflow
-	if err := json.Unmarshal(data, &result); err != nil {
-		return result, err
+	w := Workflow{Revision: state.Revision}
+	for _, r := range records {
+		w.Phases = append(w.Phases, PhaseDefinition{ID: r.ID, Number: r.Number, Name: r.Name, Mode: r.Mode, DocumentTemplate: r.Template})
 	}
-	if err := validateWorkflow(result); err != nil {
-		return result, err
-	}
-	result.Revision = revision(data)
-	return result, nil
+	return w, validateWorkflow(w)
 }
 func (s *Store) GetWorkflow() (Workflow, error) {
 	s.mu.Lock()
@@ -159,30 +147,82 @@ func validateWorkflow(w Workflow) error {
 		return fmt.Errorf("%w: a workflow needs 1–24 phases", ErrInvalidName)
 	}
 	ids := map[string]bool{}
+	numbers := map[int]bool{}
 	for _, p := range w.Phases {
-		if !regexp.MustCompile(`^[a-zA-Z0-9_-]{1,80}$`).MatchString(p.ID) || ids[p.ID] || strings.TrimSpace(p.Name) == "" || (p.Mode != "interactive" && p.Mode != "async") {
+		if !regexp.MustCompile(`^[a-zA-Z0-9_-]{1,80}$`).MatchString(p.ID) || ids[p.ID] || p.Number < 1 || numbers[p.Number] || strings.TrimSpace(p.Name) == "" || (p.Mode != "interactive" && p.Mode != "async") {
 			return fmt.Errorf("%w: invalid or duplicate phase", ErrInvalidName)
 		}
 		ids[p.ID] = true
+		numbers[p.Number] = true
 	}
 	return nil
 }
 func (s *Store) UpdateWorkflow(w Workflow, expected string) (Workflow, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	old, err := s.readWorkflow()
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		var state workflowRecord
+		if err := tx.First(&state, 1).Error; err != nil {
+			return err
+		}
+		if expected == "" || state.Revision != expected {
+			return ErrConflict
+		}
+		var records []phaseRecord
+		if err := tx.Order("position").Find(&records).Error; err != nil {
+			return err
+		}
+		raw, _ := json.Marshal(records)
+		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&historyRecord{Kind: "workflow", ID: "1", Revision: state.Revision, Content: raw}).Error; err != nil {
+			return err
+		}
+		existing := map[string]phaseRecord{}
+		for _, r := range records {
+			existing[r.ID] = r
+		}
+		if err := tx.Model(&phaseRecord{}).Where("active = ?", true).Update("active", false).Error; err != nil {
+			return err
+		}
+		for i := range w.Phases {
+			p := &w.Phases[i]
+			r, found := existing[p.ID]
+			if found {
+				if p.Number != 0 && p.Number != r.Number {
+					return fmt.Errorf("%w: phase numbers are immutable", ErrInvalidName)
+				}
+			} else {
+				r = phaseRecord{ID: p.ID}
+			}
+			r.Name = p.Name
+			r.Mode = p.Mode
+			r.Template = p.DocumentTemplate
+			r.Position = i
+			r.Active = true
+			if found {
+				if err := tx.Model(&phaseRecord{}).Where("number = ?", r.Number).Select("name", "mode", "template", "position", "active").Updates(&r).Error; err != nil {
+					return err
+				}
+			} else {
+				if err := tx.Create(&r).Error; err != nil {
+					return err
+				}
+			}
+			p.Number = r.Number
+		}
+		if err := validateWorkflow(w); err != nil {
+			return err
+		}
+		result := tx.Model(&workflowRecord{}).Where("id = ? AND revision = ?", 1, expected).Update("revision", workflowRevision(w))
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return ErrConflict
+		}
+		return nil
+	})
 	if err != nil {
-		return w, err
-	}
-	if expected == "" || old.Revision != expected {
-		return w, ErrConflict
-	}
-	if err := validateWorkflow(w); err != nil {
-		return w, err
-	}
-	data, _ := json.MarshalIndent(w, "", "  ")
-	if err := atomicWrite(filepath.Join(filepath.Dir(s.tasksDir), "workflow.json"), data, 0o644); err != nil {
-		return w, err
+		return Workflow{}, err
 	}
 	return s.readWorkflow()
 }
@@ -254,6 +294,9 @@ func (s *Store) syncPhases(task Task, w Workflow) (Task, bool, error) {
 func validateTask(t Task) error {
 	if _, err := uuid.Parse(t.ID); err != nil {
 		return err
+	}
+	if t.Number < 1 {
+		return fmt.Errorf("%w: invalid task number", ErrInvalidName)
 	}
 	if t.Status != "open" && t.Status != "focus" && t.Status != "done" && t.Status != "archived" {
 		return fmt.Errorf("%w: invalid task status", ErrInvalidName)

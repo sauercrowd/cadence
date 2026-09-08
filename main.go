@@ -26,6 +26,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer store.Close()
 
 	api := http.NewServeMux()
 	servicePath, serviceHandler := workerv1connect.NewWorkspaceServiceHandler(server.NewHandler(store))

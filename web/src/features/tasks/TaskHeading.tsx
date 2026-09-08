@@ -85,6 +85,7 @@ export function TaskHeading({
       >
         P{task.priority}
       </button>
+      <span className="task-code" aria-label="Task ID">#{task.number}</span>
       <input
         ref={title}
         className="task-heading-input"

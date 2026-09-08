@@ -22,6 +22,7 @@ const fieldLabels: Record<string, string> = {
   phase: "Phase",
   activity: "Agent activity",
 };
+const filterFields = ["priority", "status", "phase", "activity"];
 
 export function TaskFilter({
   route,
@@ -46,7 +47,7 @@ export function TaskFilter({
     <div className="task-filter">
       <div className="task-filter-input">
         <Search size={14} className="muted" />
-        {["priority", "status", "phase", "activity"].map((field) => {
+        {filterFields.map((field) => {
           const id = route.searchParams.get(field);
           if (!id) return null;
           return (
@@ -55,6 +56,13 @@ export function TaskFilter({
               className="filter-token"
               aria-label={`Remove ${fieldLabels[field]}: ${valueLabel(field, id)}`}
               onClick={() => setQuery(field, "")}
+              onKeyDown={(event) => {
+                if (event.key === "Backspace" || event.key === "Delete") {
+                  event.preventDefault();
+                  setQuery(field, "");
+                  event.currentTarget.parentElement?.querySelector("input")?.focus();
+                }
+              }}
             >
               <span>
                 {fieldLabels[field]}: {valueLabel(field, id)}
@@ -69,6 +77,11 @@ export function TaskFilter({
           value={value}
           onChange={(event) => setQuery("q", event.target.value)}
           onKeyDown={(event) => {
+            if (event.nativeEvent.isComposing) return;
+            if (event.key === "Backspace" && !value && !event.ctrlKey && !event.metaKey && !event.altKey) {
+              const last = filterFields.filter((field) => route.searchParams.has(field)).at(-1);
+              if (last) { event.preventDefault(); setQuery(last, ""); }
+            }
             if (event.key === "/" && !event.nativeEvent.isComposing) {
               event.preventDefault();
               setOpen(true);

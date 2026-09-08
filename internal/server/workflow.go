@@ -41,10 +41,10 @@ func agentProto(s *string) v1.AgentStatus {
 	return v1.AgentStatus_AGENT_STATUS_NONE
 }
 func definitionProto(p workspace.PhaseDefinition) *v1.PhaseDefinition {
-	return &v1.PhaseDefinition{Id: p.ID, Name: p.Name, Mode: p.Mode, DocumentTemplate: p.DocumentTemplate}
+	return &v1.PhaseDefinition{Id: p.ID, Number: int32(p.Number), Name: p.Name, Mode: p.Mode, DocumentTemplate: p.DocumentTemplate}
 }
 func definitionModel(p *v1.PhaseDefinition) workspace.PhaseDefinition {
-	return workspace.PhaseDefinition{ID: p.Id, Name: p.Name, Mode: p.Mode, DocumentTemplate: p.DocumentTemplate}
+	return workspace.PhaseDefinition{ID: p.Id, Number: int(p.Number), Name: p.Name, Mode: p.Mode, DocumentTemplate: p.DocumentTemplate}
 }
 func phasesProto(phases []workspace.TaskPhase) []*v1.TaskPhase {
 	result := []*v1.TaskPhase{}
@@ -65,6 +65,20 @@ func workflowProto(w workspace.Workflow) *v1.Workflow {
 func (h *Handler) GetWorkspace(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[v1.WorkspaceInfo], error) {
 	info := h.store.Info()
 	return connect.NewResponse(&v1.WorkspaceInfo{Id: info.ID, Name: info.Name, LogoPath: info.LogoPath}), nil
+}
+func (h *Handler) CreateSubtask(_ context.Context, r *connect.Request[v1.CreateSubtaskRequest]) (*connect.Response[v1.Task], error) {
+	t, err := h.store.CreateSubtask(r.Msg.TaskId, r.Msg.PhaseId, r.Msg.Name, r.Msg.Revision)
+	if err != nil {
+		return nil, rpcError(err)
+	}
+	return connect.NewResponse(taskToProto(t)), nil
+}
+func (h *Handler) UpdateSubtask(_ context.Context, r *connect.Request[v1.UpdateSubtaskRequest]) (*connect.Response[v1.Task], error) {
+	t, err := h.store.UpdateSubtask(r.Msg.TaskId, int(r.Msg.Number), r.Msg.Done, r.Msg.Revision)
+	if err != nil {
+		return nil, rpcError(err)
+	}
+	return connect.NewResponse(taskToProto(t)), nil
 }
 func (h *Handler) GetTask(_ context.Context, r *connect.Request[v1.TaskRequest]) (*connect.Response[v1.Task], error) {
 	t, e := h.store.GetTask(r.Msg.TaskId)

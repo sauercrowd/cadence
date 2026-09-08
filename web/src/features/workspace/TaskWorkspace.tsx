@@ -1,5 +1,5 @@
 import { TaskHeading } from "../tasks/TaskHeading";
-import { useEffect, useState, useSyncExternalStore, useRef } from "react";
+import { Fragment, useEffect, useState, useSyncExternalStore, useRef } from "react";
 import {
   ArrowUpRight,
   Check,
@@ -41,7 +41,8 @@ export function TaskWorkspace({
     state = useSyncExternalStore(session.subscribe, session.snapshot);
   const phase = task.phases.find((p) => p.documentId === documentId),
     doc = task.documents.find((d) => d.id === documentId);
-  const [dialog, setDialog] = useState<"document" | "conflict" | null>(null),
+  const [dialog, setDialog] = useState<"document" | "subtask" | "conflict" | null>(null),
+    [parentPhase, setParentPhase] = useState(""),
     [busy, setBusy] = useState(false),
     [name, setName] = useState(""),
     [resolution, setResolution] = useState("");
@@ -90,9 +91,9 @@ export function TaskWorkspace({
   // Phases carry visible numbers, so their numbers select them. [ and ] step
   // through everything in the navigator, phases and supporting documents alike.
   const order = [
-    ...task.phases.map((p) => p.documentId),
+    ...task.phases.flatMap((p) => [p.documentId, ...task.subtasks.filter((s) => s.phaseId === p.definition.id).map((s) => s.documentId)]),
     ...task.documents
-      .filter((d) => !task.phases.some((p) => p.documentId === d.id))
+      .filter((d) => !task.phases.some((p) => p.documentId === d.id) && !task.subtasks.some((s) => s.documentId === d.id && task.phases.some((p) => p.definition.id === s.phaseId)))
       .map((d) => d.id),
   ];
   const step = (delta: number) => {
@@ -101,7 +102,7 @@ export function TaskWorkspace({
     if (next) changeDocument(next);
   };
   useShortcutKey("jump-number", (key) => {
-    const phase = task.phases[Number(key) - 1];
+    const phase = task.phases.find((p) => p.definition.number === Number(key));
     if (phase) changeDocument(phase.documentId);
   });
   useShortcut("doc-next", () => step(1));
@@ -145,8 +146,7 @@ export function TaskWorkspace({
             {task.phases.map((p, i) => {
               const isCurrent = i === currentPhaseIndex;
               return (
-                <div
-                  key={p.definition.id}
+                <Fragment key={p.definition.id}><div
                   className={`phase-nav-item ${p.documentId === documentId ? "selected" : ""} ${i < currentPhaseIndex ? "is-done" : ""} ${isCurrent ? "is-current" : ""}`}
                 >
                   <button
@@ -164,7 +164,7 @@ export function TaskWorkspace({
                     }}
                   >
                     <span className="phase-step-number">
-                      {i < currentPhaseIndex ? <Check size={11} /> : i + 1}
+                      {p.definition.number}
                     </span>
                     <span className="phase-step-hover">
                       <Clock size={10} />
@@ -177,12 +177,29 @@ export function TaskWorkspace({
                     disabled={busy}
                     onClick={() => changeDocument(p.documentId)}
                   >
-                    {p.definition.name}
+                    <span>{p.definition.name}</span>
                     {p.definition.mode === "async" && (
                       <Bot size={13} aria-label="Async phase" />
                     )}
                   </button>
+                  <button className="icon-button" aria-label={`Add subtask to ${p.definition.name}`} disabled={busy}
+                    onClick={() => { setParentPhase(p.definition.id); setName(""); setDialog("subtask"); }}>
+                    <Plus size={12} />
+                  </button>
                 </div>
+                {task.subtasks.filter((s) => s.phaseId === p.definition.id).map((s) => (
+                  <div key={s.number} className={`subtask-nav ${s.documentId === documentId ? "selected" : ""}`}>
+                    <input type="checkbox" checked={s.done} aria-label={`Complete ${s.name}`} disabled={busy}
+                      onChange={(event) => {
+                        const done = event.target.checked;
+                        void run(async () => { await session.flush(); onTask(await api.updateSubtask(await api.task(task.id), s.number, done)); });
+                      }} />
+                    <button className="phase-nav-label" onClick={() => changeDocument(s.documentId)} title={s.name}>
+                      <span className="task-code">S{s.number}</span><span>{s.name}</span>
+                    </button>
+                  </div>
+                ))}
+                </Fragment>
               );
             })}
           </div>
@@ -200,7 +217,7 @@ export function TaskWorkspace({
             </button>
           </div>
           {task.documents
-            .filter((d) => !task.phases.some((p) => p.documentId === d.id))
+            .filter((d) => !task.phases.some((p) => p.documentId === d.id) && !task.subtasks.some((s) => s.documentId === d.id && task.phases.some((p) => p.definition.id === s.phaseId)))
             .map((d) => (
               <button
                 key={d.id}
@@ -225,7 +242,8 @@ export function TaskWorkspace({
         <section className="phase-workspace">
           <header className="phase-header">
             <div>
-              <h2>{doc.name}</h2>
+              {phase && <span className="task-code">#{phase.definition.number}</span>}
+              <h2>{phase?.definition.name || doc.name}</h2>
               {phase?.definition.mode === "async" && (
                 <Bot size={14} aria-label="Async phase" />
               )}
@@ -332,6 +350,24 @@ export function TaskWorkspace({
           </div>
         </section>
       </div>
+      {dialog === "subtask" && (
+        <Modal title="Add subtask" onClose={() => setDialog(null)}>
+          <form onSubmit={(event) => {
+            event.preventDefault();
+            void run(async () => {
+              await session.flush();
+              const updated = await api.createSubtask(await api.task(task.id), parentPhase, name.trim());
+              onTask(updated);
+              changeDocument(updated.subtasks[updated.subtasks.length - 1].documentId);
+            });
+          }}>
+            <div className="modal-content"><label>Subtask name
+              <input autoFocus required maxLength={120} value={name} onChange={(event) => setName(event.target.value)} />
+            </label></div>
+            <footer><button className="button primary" disabled={busy || !name.trim()}>Create subtask</button></footer>
+          </form>
+        </Modal>
+      )}
       {dialog === "document" && (
         <Modal title="Add document" onClose={() => setDialog(null)}>
           <form

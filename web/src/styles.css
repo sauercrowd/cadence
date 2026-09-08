@@ -42,6 +42,8 @@
 
   /* --- geometry ------------------------------------------------------ */
   --r: 2px;
+  --focus-width: 1px;
+  --focus-offset: 2px;
   --row: 26px;
   --ctl-h: 22px;
   --ctl-pad: 3px 7px;
@@ -106,12 +108,12 @@ select {
 }
 button:focus-visible,
 a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
+input:focus,
+select:focus,
+textarea:focus,
 [role="option"]:focus-visible {
-  outline: 2px solid var(--structure);
-  outline-offset: 1px;
+  outline: var(--focus-width) solid var(--structure);
+  outline-offset: var(--focus-offset);
 }
 a {
   color: var(--structure);
@@ -319,7 +321,9 @@ pre {
 
 .task-code {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: var(--fs-label);
+  flex-shrink: 0;
+  white-space: nowrap;
   letter-spacing: 0.04em;
   color: var(--faint);
   font-variant-numeric: tabular-nums;
@@ -952,6 +956,30 @@ body[data-keys="on"] .task-row.cursor::after {
 .phase-nav-label svg {
   color: var(--faint);
 }
+.phase-nav-label > span:not(.task-code) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.subtask-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  min-width: 0;
+  min-height: var(--row);
+  margin-left: var(--s4);
+  padding: 0 var(--s1);
+  border-left: var(--focus-width) solid var(--rule);
+}
+.subtask-nav.selected {
+  background: var(--structure-soft);
+  color: var(--structure);
+}
+.subtask-nav input {
+  margin: 0;
+  accent-color: var(--structure);
+  flex-shrink: 0;
+}
 
 /* Numbered badge doubles as the "make current" control. */
 .phase-step {
@@ -1194,6 +1222,13 @@ body[data-keys="on"] .task-row.cursor::after {
   overflow-wrap: break-word;
   caret-color: var(--structure);
 }
+.rich-editor:focus {
+  outline: var(--focus-width) solid var(--structure);
+  outline-offset: var(--focus-offset);
+}
+.phase-workspace:has(.rich-editor:focus, .cm-content:focus) .phase-header {
+  border-bottom-color: var(--structure);
+}
 .editor-h1 {
   margin: 4px 0 var(--s4);
   font-size: 22px;
@@ -1393,7 +1428,8 @@ body[data-keys="on"] .task-row.cursor::after {
   font-size: 12px;
 }
 .source-editor .cm-focused {
-  outline: none;
+  outline: var(--focus-width) solid var(--structure);
+  outline-offset: var(--focus-offset);
   border-color: var(--structure);
 }
 .source-editor .cm-gutters {

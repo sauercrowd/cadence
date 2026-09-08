@@ -8,6 +8,7 @@ const workflowSchema = z
   .array(
     z.object({
       id: z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/),
+      number: z.number().int().nonnegative(),
       name: z.string().trim().min(1).max(120),
       mode: z.enum(["interactive", "async"]),
       documentTemplate: z.string(),
@@ -66,7 +67,7 @@ export function WorkflowSettings({
   const phase = phases[index];
   // The list is numbered, so its numbers select it.
   useShortcutKey("jump-number", (key) => {
-    const target = phases[Number(key) - 1];
+    const target = phases.find((p) => p.number === Number(key));
     if (target) setSelected(target.id);
   });
   function update(patch: Partial<PhaseDefinition>) {
@@ -124,7 +125,7 @@ export function WorkflowSettings({
               aria-current={p.id === selected ? "true" : undefined}
               onClick={() => setSelected(p.id)}
             >
-              <span className="muted">{i + 1}</span>
+              <span className="muted">{p.number || "—"}</span>
               <span>{p.name || "Untitled phase"}</span>
             </button>
           ))}
@@ -134,6 +135,7 @@ export function WorkflowSettings({
             onClick={() => {
               const p = {
                 id: crypto.randomUUID(),
+                number: 0,
                 name: "New phase",
                 mode: "interactive",
                 documentTemplate: "",

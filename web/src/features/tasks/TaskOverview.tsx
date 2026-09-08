@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { Check, Bot, List, Columns3, Plus, CircleDot } from "lucide-react";
 import type { Task } from "../../data/api";
 import { setQuery } from "../../app/router";
-import { KeyHint, useShortcut } from "../../app/keys";
+import { KeyHint, useShortcut, useShortcutKey } from "../../app/keys";
 import { statusLabels, StatusIcon } from "./status";
 
 export { statusLabels, StatusIcon };
@@ -59,7 +59,7 @@ export function TaskOverview({
   const filtered = scoped
     .filter(
       (t) =>
-        (!search || t.title.toLowerCase().includes(search.toLowerCase())) &&
+        (!search || t.title.toLowerCase().includes(search.toLowerCase()) || String(t.number) === search.replace(/^#/, "")) &&
         (!activity ||
           (activity === "working"
             ? t.agentStatus === "working"
@@ -91,6 +91,10 @@ export function TaskOverview({
       return next;
     });
   useShortcut("toggle-view", () => setQuery("view", board ? "list" : "board"));
+  useShortcutKey("jump-number", (key) => {
+    const task = filtered.find((t) => t.number === Number(key));
+    if (task) onOpen(task);
+  });
   useShortcut("row-next", () => move(1), !board && filtered.length > 0);
   useShortcut("row-prev", () => move(-1), !board && filtered.length > 0);
   useShortcut(
@@ -200,7 +204,7 @@ export function TaskOverview({
                       P{t.priority}
                     </span>
                     <span className="task-code">
-                      {t.id.slice(0, 6).toUpperCase()}
+                      #{t.number}
                     </span>
                     {t.agentStatus && (
                       <Bot size={14} aria-label="Agent working" />
@@ -231,6 +235,7 @@ export function TaskOverview({
               <span className={`priority p${t.priority}`}>P{t.priority}</span>
               <button className="task-title" onClick={() => onOpen(t)}>
                 <StatusIcon status={t.status} />
+                <span className="task-code">#{t.number}</span>
                 <span>
                   <strong>{t.title}</strong>
                 </span>

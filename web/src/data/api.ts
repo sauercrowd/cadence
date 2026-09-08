@@ -13,6 +13,8 @@ export type Phase = {
   documentId: string;
 };
 export type Task = {
+  number: number;
+  subtasks: { number: number; phaseId: string; documentId: string; name: string; done: boolean }[];
   id: string;
   title: string;
   status: Status;
@@ -32,6 +34,8 @@ const statuses: Record<Status, TaskStatus> = {
 };
 function task(t: ProtoTask): Task {
   return {
+    number: t.number,
+    subtasks: t.subtasks,
     id: t.id,
     title: t.name,
     status:
@@ -53,6 +57,10 @@ function task(t: ProtoTask): Task {
   };
 }
 export const api = {
+  createSubtask: async (t: Task, phaseId: string, name: string) =>
+    task(await workspaceClient.createSubtask({taskId: t.id, phaseId, name, revision: t.revision})),
+  updateSubtask: async (t: Task, number: number, done: boolean) =>
+    task(await workspaceClient.updateSubtask({taskId: t.id, number, done, revision: t.revision})),
   workspace: () => workspaceClient.getWorkspace({}),
   tasks: async () => {
     const response = await workspaceClient.listTasks({});

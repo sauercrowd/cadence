@@ -23,10 +23,10 @@ export const SHORTCUTS: Shortcut[] = [
   {
     // Anything numbered on screen is addressable by its number.
     id: "jump-number",
-    keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
-    label: "Jump to a numbered item",
+    keys: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
+    label: "Type an ID to jump (pause to open)",
     scope: "Global",
-    hint: "1–9",
+    hint: "0–9",
   },
 
   {
@@ -121,17 +121,21 @@ export function useShortcutKey(
   useEffect(() => {
     if (!enabled) return;
     const keys = shortcut(id).keys;
+    let digits = "";
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const onKey = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.metaKey || event.repeat || event.isComposing)
         return;
-      if (!keys.includes(event.key)) return;
+      if (!keys.includes(event.key)) { clearTimeout(timer); digits = ""; return; }
       if (isTyping(event.target) || document.querySelector("dialog[open]"))
         return;
       event.preventDefault();
-      latest.current(event.key);
+      digits += event.key;
+      clearTimeout(timer);
+      timer = setTimeout(() => { latest.current(digits); digits = ""; }, 400);
     };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    return () => { clearTimeout(timer); document.removeEventListener("keydown", onKey); };
   }, [id, enabled]);
 }
 
