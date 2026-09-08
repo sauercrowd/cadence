@@ -12,9 +12,23 @@ export type Phase = {
   definition: PhaseDefinition;
   documentId: string;
 };
+export type Subphase = {
+  number: number;
+  phaseId: string;
+  documentId: string;
+  name: string;
+  done: boolean;
+};
+export type PhaseLink = {
+  number: number;
+  phaseId: string;
+  url: string;
+  title: string;
+};
 export type Task = {
   number: number;
-  subtasks: { number: number; phaseId: string; documentId: string; name: string; done: boolean }[];
+  subphases: Subphase[];
+  links: PhaseLink[];
   id: string;
   title: string;
   status: Status;
@@ -35,7 +49,8 @@ const statuses: Record<Status, TaskStatus> = {
 function task(t: ProtoTask): Task {
   return {
     number: t.number,
-    subtasks: t.subtasks,
+    subphases: t.subphases,
+    links: t.links,
     id: t.id,
     title: t.name,
     status:
@@ -57,10 +72,47 @@ function task(t: ProtoTask): Task {
   };
 }
 export const api = {
-  createSubtask: async (t: Task, phaseId: string, name: string) =>
-    task(await workspaceClient.createSubtask({taskId: t.id, phaseId, name, revision: t.revision})),
-  updateSubtask: async (t: Task, number: number, done: boolean) =>
-    task(await workspaceClient.updateSubtask({taskId: t.id, number, done, revision: t.revision})),
+  createSubphase: async (t: Task, phaseId: string, name: string) =>
+    task(
+      await workspaceClient.createSubphase({
+        taskId: t.id,
+        phaseId,
+        name,
+        revision: t.revision,
+      }),
+    ),
+  updateSubphase: async (t: Task, number: number, done: boolean) =>
+    task(
+      await workspaceClient.updateSubphase({
+        taskId: t.id,
+        number,
+        done,
+        revision: t.revision,
+      }),
+    ),
+  createPhaseLink: async (
+    t: Task,
+    phaseId: string,
+    url: string,
+    title: string,
+  ) =>
+    task(
+      await workspaceClient.createPhaseLink({
+        taskId: t.id,
+        phaseId,
+        url,
+        title,
+        revision: t.revision,
+      }),
+    ),
+  deletePhaseLink: async (t: Task, number: number) =>
+    task(
+      await workspaceClient.deletePhaseLink({
+        taskId: t.id,
+        number,
+        revision: t.revision,
+      }),
+    ),
   workspace: () => workspaceClient.getWorkspace({}),
   tasks: async () => {
     const response = await workspaceClient.listTasks({});
@@ -74,7 +126,10 @@ export const api = {
   ) => {
     const created = task(await workspaceClient.createTask({ name: title }));
     const patch: Partial<Pick<Task, "priority" | "status">> = {};
-    if (overrides?.priority !== undefined && overrides.priority !== created.priority)
+    if (
+      overrides?.priority !== undefined &&
+      overrides.priority !== created.priority
+    )
       patch.priority = overrides.priority;
     if (overrides?.status !== undefined && overrides.status !== created.status)
       patch.status = overrides.status;

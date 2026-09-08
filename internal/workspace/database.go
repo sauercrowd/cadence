@@ -19,13 +19,14 @@ import (
 // ORM records separate persistence from the public model. Deleted records
 // reserve their public numbers permanently.
 type taskRecord struct {
-	Steps          []subtaskRecord `gorm:"foreignKey:TaskID;references:ID"`
-	Number         int             `gorm:"primaryKey;autoIncrement"`
-	ID             string          `gorm:"not null;uniqueIndex"`
-	Name           string          `gorm:"not null"`
-	Status         string          `gorm:"not null;check:status IN ('open','focus','done','archived')"`
-	Priority       int             `gorm:"not null;check:priority BETWEEN 0 AND 3"`
-	AgentStatus    *string         `gorm:"check:agent_status IS NULL OR agent_status = 'working'"`
+	Subphases      []subphaseRecord  `gorm:"foreignKey:TaskID;references:ID"`
+	Links          []phaseLinkRecord `gorm:"foreignKey:TaskID;references:ID"`
+	Number         int               `gorm:"primaryKey;autoIncrement"`
+	ID             string            `gorm:"not null;uniqueIndex"`
+	Name           string            `gorm:"not null"`
+	Status         string            `gorm:"not null;check:status IN ('open','focus','done','archived')"`
+	Priority       int               `gorm:"not null;check:priority BETWEEN 0 AND 3"`
+	AgentStatus    *string           `gorm:"check:agent_status IS NULL OR agent_status = 'working'"`
 	CurrentPhaseID string
 	CreatedAt      time.Time `gorm:"autoCreateTime:false"`
 	UpdatedAt      time.Time `gorm:"autoUpdateTime:false"`
@@ -69,7 +70,7 @@ type phaseRecord struct {
 
 func (phaseRecord) TableName() string { return "phases" }
 
-type subtaskRecord struct {
+type subphaseRecord struct {
 	Number     int    `gorm:"primaryKey;autoIncrement"`
 	TaskID     string `gorm:"not null;index"`
 	PhaseID    string
@@ -79,7 +80,18 @@ type subtaskRecord struct {
 	Document   documentRecord `gorm:"foreignKey:DocumentID,TaskID;references:ID,TaskID"`
 }
 
-func (subtaskRecord) TableName() string { return "subtasks" }
+func (subphaseRecord) TableName() string { return "subphases" }
+
+type phaseLinkRecord struct {
+	Number   int    `gorm:"primaryKey;autoIncrement"`
+	TaskID   string `gorm:"not null;index"`
+	PhaseID  string
+	URL      string `gorm:"not null"`
+	Title    string
+	Position int
+}
+
+func (phaseLinkRecord) TableName() string { return "phase_links" }
 
 type workflowRecord struct {
 	ID       int `gorm:"primaryKey;autoIncrement:false"`
@@ -113,7 +125,14 @@ func (s *Store) openDatabase() error {
 		return err
 	}
 	pool.SetMaxOpenConns(1)
-	if err = db.AutoMigrate(&migrationRecord{}, &taskRecord{}, &documentRecord{}, &taskPhaseRecord{}, &phaseRecord{}, &workflowRecord{}, &historyRecord{}, &subtaskRecord{}); err != nil {
+	// "subtasks" was this table's name before subphases were named as such.
+	if db.Migrator().HasTable("subtasks") && !db.Migrator().HasTable("subphases") {
+		if err = db.Migrator().RenameTable("subtasks", "subphases"); err != nil {
+			pool.Close()
+			return err
+		}
+	}
+	if err = db.AutoMigrate(&migrationRecord{}, &taskRecord{}, &documentRecord{}, &taskPhaseRecord{}, &phaseRecord{}, &workflowRecord{}, &historyRecord{}, &subphaseRecord{}, &phaseLinkRecord{}); err != nil {
 		pool.Close()
 		return err
 	}
@@ -282,7 +301,7 @@ func writeTaskChildren(tx *gorm.DB, t Task) error {
 func (s *Store) loadTask(id string) (Task, error) {
 	var r taskRecord
 	ordered := func(db *gorm.DB) *gorm.DB { return db.Order("position") }
-	err := s.db.Preload("Documents", ordered).Preload("Phases", ordered).Preload("Steps", func(db *gorm.DB) *gorm.DB { return db.Order("number") }).First(&r, "id = ? AND deleted = ?", id, false).Error
+	err := s.db.Preload("Documents", ordered).Preload("Phases", ordered).Preload("Subphases", func(db *gorm.DB) *gorm.DB { return db.Order("number") }).Preload("Links", func(db *gorm.DB) *gorm.DB { return db.Order("position, number") }).First(&r, "id = ? AND deleted = ?", id, false).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return Task{}, ErrNotFound
 	}
@@ -296,8 +315,11 @@ func (s *Store) loadTask(id string) (Task, error) {
 	for _, p := range r.Phases {
 		t.Phases = append(t.Phases, TaskPhase{PhaseID: p.PhaseID, DocumentID: p.DocumentID})
 	}
-	for _, step := range r.Steps {
-		t.Subtasks = append(t.Subtasks, Subtask{Number: step.Number, PhaseID: step.PhaseID, DocumentID: step.DocumentID, Name: step.Name, Done: step.Done})
+	for _, sub := range r.Subphases {
+		t.Subphases = append(t.Subphases, Subphase{Number: sub.Number, PhaseID: sub.PhaseID, DocumentID: sub.DocumentID, Name: sub.Name, Done: sub.Done})
+	}
+	for _, l := range r.Links {
+		t.Links = append(t.Links, PhaseLink{Number: l.Number, PhaseID: l.PhaseID, URL: l.URL, Title: l.Title})
 	}
 	return t, nil
 }

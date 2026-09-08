@@ -43,8 +43,19 @@ export const SHORTCUTS: Shortcut[] = [
     scope: "Task list",
     hint: "K",
   },
-  { id: "row-open", keys: ["Enter"], label: "Open task", scope: "Task list", hint: "↵" },
-  { id: "toggle-view", keys: ["v"], label: "List or board", scope: "Task list" },
+  {
+    id: "row-open",
+    keys: ["Enter"],
+    label: "Open task",
+    scope: "Task list",
+    hint: "↵",
+  },
+  {
+    id: "toggle-view",
+    keys: ["v"],
+    label: "List or board",
+    scope: "Task list",
+  },
 
   {
     id: "back",
@@ -55,8 +66,23 @@ export const SHORTCUTS: Shortcut[] = [
   },
   { id: "doc-prev", keys: ["["], label: "Previous document", scope: "Task" },
   { id: "doc-next", keys: ["]"], label: "Next document", scope: "Task" },
-  { id: "make-current", keys: ["m"], label: "Make phase current", scope: "Task" },
+  {
+    id: "make-current",
+    keys: ["m"],
+    label: "Make phase current",
+    scope: "Task",
+  },
   { id: "edit", keys: ["e"], label: "Edit document", scope: "Task" },
+  // Bound inside the editor, not globally: it has to fire while the caret is
+  // in the document, which a bare letter cannot do.
+  {
+    id: "add-comment",
+    keys: ["M"],
+    label: "Comment on selection",
+    scope: "Task",
+    hint: "⌘⌥M",
+  },
+  { id: "phase-links", keys: ["u"], label: "Open a phase link", scope: "Task" },
 ];
 
 const byId = new Map(SHORTCUTS.map((s) => [s.id, s]));
@@ -126,16 +152,26 @@ export function useShortcutKey(
     const onKey = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.metaKey || event.repeat || event.isComposing)
         return;
-      if (!keys.includes(event.key)) { clearTimeout(timer); digits = ""; return; }
+      if (!keys.includes(event.key)) {
+        clearTimeout(timer);
+        digits = "";
+        return;
+      }
       if (isTyping(event.target) || document.querySelector("dialog[open]"))
         return;
       event.preventDefault();
       digits += event.key;
       clearTimeout(timer);
-      timer = setTimeout(() => { latest.current(digits); digits = ""; }, 400);
+      timer = setTimeout(() => {
+        latest.current(digits);
+        digits = "";
+      }, 400);
     };
     document.addEventListener("keydown", onKey);
-    return () => { clearTimeout(timer); document.removeEventListener("keydown", onKey); };
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [id, enabled]);
 }
 
@@ -146,7 +182,12 @@ export function useShortcutKey(
 export function useHintMode() {
   useEffect(() => {
     const show = (event: KeyboardEvent) => {
-      if (event.key === "Alt" && !document.querySelector("dialog[open]"))
+      if (
+        event.key === "Alt" &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !document.querySelector("dialog[open]")
+      )
         document.body.dataset.keys = "on";
     };
     const hide = () => delete document.body.dataset.keys;

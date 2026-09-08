@@ -16,7 +16,16 @@ type TaskPhase struct {
 	DocumentID string          `json:"documentId"`
 	Definition PhaseDefinition `json:"-"`
 }
-type Subtask struct {
+
+// PhaseLink is a bookmark attached to one of a task's phases. Number is a
+// stable id; display order is the order the links are returned in.
+type PhaseLink struct {
+	Number  int    `json:"number"`
+	PhaseID string `json:"phaseId"`
+	URL     string `json:"url"`
+	Title   string `json:"title,omitempty"`
+}
+type Subphase struct {
 	Number     int    `json:"number"`
 	PhaseID    string `json:"phaseId"`
 	DocumentID string `json:"documentId"`

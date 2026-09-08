@@ -28,12 +28,19 @@ message Task {
   repeated TaskPhase phases = 11;
   string revision = 12;
   int32 number = 13;
-  repeated Subtask subtasks = 14;
+  repeated Subphase subphases = 14;
+  repeated PhaseLink links = 15;
 }
 
-message Subtask { int32 number = 1; string phase_id = 2; string document_id = 3; string name = 4; bool done = 5; }
-message CreateSubtaskRequest { string task_id = 1; string phase_id = 2; string name = 3; string revision = 4; }
-message UpdateSubtaskRequest { string task_id = 1; int32 number = 2; bool done = 3; string revision = 4; }
+message Subphase { int32 number = 1; string phase_id = 2; string document_id = 3; string name = 4; bool done = 5; }
+message CreateSubphaseRequest { string task_id = 1; string phase_id = 2; string name = 3; string revision = 4; }
+message UpdateSubphaseRequest { string task_id = 1; int32 number = 2; bool done = 3; string revision = 4; }
+
+// Links are per-phase bookmarks. `number` is a stable id for deletion; the UI
+// numbers them by their order within the phase.
+message PhaseLink { int32 number = 1; string phase_id = 2; string url = 3; string title = 4; }
+message CreatePhaseLinkRequest { string task_id = 1; string phase_id = 2; string url = 3; string title = 4; string revision = 5; }
+message DeletePhaseLinkRequest { string task_id = 1; int32 number = 2; string revision = 3; }
 
 enum TaskStatus { TASK_STATUS_UNSPECIFIED = 0; TASK_STATUS_OPEN = 1; TASK_STATUS_FOCUS = 2; TASK_STATUS_DONE = 3; TASK_STATUS_ARCHIVED = 4; }
 enum AgentStatus { AGENT_STATUS_NONE = 0; AGENT_STATUS_WORKING = 1; }
@@ -95,8 +102,10 @@ message UpdateDocumentRequest {
 }
 
 service WorkspaceService {
-  rpc CreateSubtask(CreateSubtaskRequest) returns (Task) {}
-  rpc UpdateSubtask(UpdateSubtaskRequest) returns (Task) {}
+  rpc CreateSubphase(CreateSubphaseRequest) returns (Task) {}
+  rpc UpdateSubphase(UpdateSubphaseRequest) returns (Task) {}
+  rpc CreatePhaseLink(CreatePhaseLinkRequest) returns (Task) {}
+  rpc DeletePhaseLink(DeletePhaseLinkRequest) returns (Task) {}
   rpc GetWorkspace(google.protobuf.Empty) returns (WorkspaceInfo) { option idempotency_level = NO_SIDE_EFFECTS; }
   rpc GetTask(TaskRequest) returns (Task) { option idempotency_level = NO_SIDE_EFFECTS; }
   rpc UpdateTask(UpdateTaskRequest) returns (Task) {}

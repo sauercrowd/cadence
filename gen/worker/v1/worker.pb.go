@@ -199,7 +199,8 @@ type Task struct {
 	Phases         []*TaskPhase           `protobuf:"bytes,11,rep,name=phases,proto3" json:"phases,omitempty"`
 	Revision       string                 `protobuf:"bytes,12,opt,name=revision,proto3" json:"revision,omitempty"`
 	Number         int32                  `protobuf:"varint,13,opt,name=number,proto3" json:"number,omitempty"`
-	Subtasks       []*Subtask             `protobuf:"bytes,14,rep,name=subtasks,proto3" json:"subtasks,omitempty"`
+	Subphases      []*Subphase            `protobuf:"bytes,14,rep,name=subphases,proto3" json:"subphases,omitempty"`
+	Links          []*PhaseLink           `protobuf:"bytes,15,rep,name=links,proto3" json:"links,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -318,14 +319,21 @@ func (x *Task) GetNumber() int32 {
 	return 0
 }
 
-func (x *Task) GetSubtasks() []*Subtask {
+func (x *Task) GetSubphases() []*Subphase {
 	if x != nil {
-		return x.Subtasks
+		return x.Subphases
 	}
 	return nil
 }
 
-type Subtask struct {
+func (x *Task) GetLinks() []*PhaseLink {
+	if x != nil {
+		return x.Links
+	}
+	return nil
+}
+
+type Subphase struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Number        int32                  `protobuf:"varint,1,opt,name=number,proto3" json:"number,omitempty"`
 	PhaseId       string                 `protobuf:"bytes,2,opt,name=phase_id,json=phaseId,proto3" json:"phase_id,omitempty"`
@@ -336,20 +344,20 @@ type Subtask struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Subtask) Reset() {
-	*x = Subtask{}
+func (x *Subphase) Reset() {
+	*x = Subphase{}
 	mi := &file_worker_v1_worker_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Subtask) String() string {
+func (x *Subphase) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Subtask) ProtoMessage() {}
+func (*Subphase) ProtoMessage() {}
 
-func (x *Subtask) ProtoReflect() protoreflect.Message {
+func (x *Subphase) ProtoReflect() protoreflect.Message {
 	mi := &file_worker_v1_worker_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -361,47 +369,47 @@ func (x *Subtask) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Subtask.ProtoReflect.Descriptor instead.
-func (*Subtask) Descriptor() ([]byte, []int) {
+// Deprecated: Use Subphase.ProtoReflect.Descriptor instead.
+func (*Subphase) Descriptor() ([]byte, []int) {
 	return file_worker_v1_worker_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *Subtask) GetNumber() int32 {
+func (x *Subphase) GetNumber() int32 {
 	if x != nil {
 		return x.Number
 	}
 	return 0
 }
 
-func (x *Subtask) GetPhaseId() string {
+func (x *Subphase) GetPhaseId() string {
 	if x != nil {
 		return x.PhaseId
 	}
 	return ""
 }
 
-func (x *Subtask) GetDocumentId() string {
+func (x *Subphase) GetDocumentId() string {
 	if x != nil {
 		return x.DocumentId
 	}
 	return ""
 }
 
-func (x *Subtask) GetName() string {
+func (x *Subphase) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *Subtask) GetDone() bool {
+func (x *Subphase) GetDone() bool {
 	if x != nil {
 		return x.Done
 	}
 	return false
 }
 
-type CreateSubtaskRequest struct {
+type CreateSubphaseRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	PhaseId       string                 `protobuf:"bytes,2,opt,name=phase_id,json=phaseId,proto3" json:"phase_id,omitempty"`
@@ -411,20 +419,20 @@ type CreateSubtaskRequest struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CreateSubtaskRequest) Reset() {
-	*x = CreateSubtaskRequest{}
+func (x *CreateSubphaseRequest) Reset() {
+	*x = CreateSubphaseRequest{}
 	mi := &file_worker_v1_worker_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CreateSubtaskRequest) String() string {
+func (x *CreateSubphaseRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CreateSubtaskRequest) ProtoMessage() {}
+func (*CreateSubphaseRequest) ProtoMessage() {}
 
-func (x *CreateSubtaskRequest) ProtoReflect() protoreflect.Message {
+func (x *CreateSubphaseRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_worker_v1_worker_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -436,40 +444,40 @@ func (x *CreateSubtaskRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateSubtaskRequest.ProtoReflect.Descriptor instead.
-func (*CreateSubtaskRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateSubphaseRequest.ProtoReflect.Descriptor instead.
+func (*CreateSubphaseRequest) Descriptor() ([]byte, []int) {
 	return file_worker_v1_worker_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *CreateSubtaskRequest) GetTaskId() string {
+func (x *CreateSubphaseRequest) GetTaskId() string {
 	if x != nil {
 		return x.TaskId
 	}
 	return ""
 }
 
-func (x *CreateSubtaskRequest) GetPhaseId() string {
+func (x *CreateSubphaseRequest) GetPhaseId() string {
 	if x != nil {
 		return x.PhaseId
 	}
 	return ""
 }
 
-func (x *CreateSubtaskRequest) GetName() string {
+func (x *CreateSubphaseRequest) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *CreateSubtaskRequest) GetRevision() string {
+func (x *CreateSubphaseRequest) GetRevision() string {
 	if x != nil {
 		return x.Revision
 	}
 	return ""
 }
 
-type UpdateSubtaskRequest struct {
+type UpdateSubphaseRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	Number        int32                  `protobuf:"varint,2,opt,name=number,proto3" json:"number,omitempty"`
@@ -479,20 +487,20 @@ type UpdateSubtaskRequest struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *UpdateSubtaskRequest) Reset() {
-	*x = UpdateSubtaskRequest{}
+func (x *UpdateSubphaseRequest) Reset() {
+	*x = UpdateSubphaseRequest{}
 	mi := &file_worker_v1_worker_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UpdateSubtaskRequest) String() string {
+func (x *UpdateSubphaseRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UpdateSubtaskRequest) ProtoMessage() {}
+func (*UpdateSubphaseRequest) ProtoMessage() {}
 
-func (x *UpdateSubtaskRequest) ProtoReflect() protoreflect.Message {
+func (x *UpdateSubphaseRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_worker_v1_worker_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -504,33 +512,239 @@ func (x *UpdateSubtaskRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateSubtaskRequest.ProtoReflect.Descriptor instead.
-func (*UpdateSubtaskRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateSubphaseRequest.ProtoReflect.Descriptor instead.
+func (*UpdateSubphaseRequest) Descriptor() ([]byte, []int) {
 	return file_worker_v1_worker_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *UpdateSubtaskRequest) GetTaskId() string {
+func (x *UpdateSubphaseRequest) GetTaskId() string {
 	if x != nil {
 		return x.TaskId
 	}
 	return ""
 }
 
-func (x *UpdateSubtaskRequest) GetNumber() int32 {
+func (x *UpdateSubphaseRequest) GetNumber() int32 {
 	if x != nil {
 		return x.Number
 	}
 	return 0
 }
 
-func (x *UpdateSubtaskRequest) GetDone() bool {
+func (x *UpdateSubphaseRequest) GetDone() bool {
 	if x != nil {
 		return x.Done
 	}
 	return false
 }
 
-func (x *UpdateSubtaskRequest) GetRevision() string {
+func (x *UpdateSubphaseRequest) GetRevision() string {
+	if x != nil {
+		return x.Revision
+	}
+	return ""
+}
+
+// Links are per-phase bookmarks. `number` is a stable id for deletion; the UI
+// numbers them by their order within the phase.
+type PhaseLink struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Number        int32                  `protobuf:"varint,1,opt,name=number,proto3" json:"number,omitempty"`
+	PhaseId       string                 `protobuf:"bytes,2,opt,name=phase_id,json=phaseId,proto3" json:"phase_id,omitempty"`
+	Url           string                 `protobuf:"bytes,3,opt,name=url,proto3" json:"url,omitempty"`
+	Title         string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PhaseLink) Reset() {
+	*x = PhaseLink{}
+	mi := &file_worker_v1_worker_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PhaseLink) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PhaseLink) ProtoMessage() {}
+
+func (x *PhaseLink) ProtoReflect() protoreflect.Message {
+	mi := &file_worker_v1_worker_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PhaseLink.ProtoReflect.Descriptor instead.
+func (*PhaseLink) Descriptor() ([]byte, []int) {
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *PhaseLink) GetNumber() int32 {
+	if x != nil {
+		return x.Number
+	}
+	return 0
+}
+
+func (x *PhaseLink) GetPhaseId() string {
+	if x != nil {
+		return x.PhaseId
+	}
+	return ""
+}
+
+func (x *PhaseLink) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *PhaseLink) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+type CreatePhaseLinkRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	PhaseId       string                 `protobuf:"bytes,2,opt,name=phase_id,json=phaseId,proto3" json:"phase_id,omitempty"`
+	Url           string                 `protobuf:"bytes,3,opt,name=url,proto3" json:"url,omitempty"`
+	Title         string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	Revision      string                 `protobuf:"bytes,5,opt,name=revision,proto3" json:"revision,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreatePhaseLinkRequest) Reset() {
+	*x = CreatePhaseLinkRequest{}
+	mi := &file_worker_v1_worker_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreatePhaseLinkRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreatePhaseLinkRequest) ProtoMessage() {}
+
+func (x *CreatePhaseLinkRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_worker_v1_worker_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreatePhaseLinkRequest.ProtoReflect.Descriptor instead.
+func (*CreatePhaseLinkRequest) Descriptor() ([]byte, []int) {
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CreatePhaseLinkRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *CreatePhaseLinkRequest) GetPhaseId() string {
+	if x != nil {
+		return x.PhaseId
+	}
+	return ""
+}
+
+func (x *CreatePhaseLinkRequest) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *CreatePhaseLinkRequest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *CreatePhaseLinkRequest) GetRevision() string {
+	if x != nil {
+		return x.Revision
+	}
+	return ""
+}
+
+type DeletePhaseLinkRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	Number        int32                  `protobuf:"varint,2,opt,name=number,proto3" json:"number,omitempty"`
+	Revision      string                 `protobuf:"bytes,3,opt,name=revision,proto3" json:"revision,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeletePhaseLinkRequest) Reset() {
+	*x = DeletePhaseLinkRequest{}
+	mi := &file_worker_v1_worker_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeletePhaseLinkRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeletePhaseLinkRequest) ProtoMessage() {}
+
+func (x *DeletePhaseLinkRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_worker_v1_worker_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeletePhaseLinkRequest.ProtoReflect.Descriptor instead.
+func (*DeletePhaseLinkRequest) Descriptor() ([]byte, []int) {
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *DeletePhaseLinkRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *DeletePhaseLinkRequest) GetNumber() int32 {
+	if x != nil {
+		return x.Number
+	}
+	return 0
+}
+
+func (x *DeletePhaseLinkRequest) GetRevision() string {
 	if x != nil {
 		return x.Revision
 	}
@@ -550,7 +764,7 @@ type PhaseDefinition struct {
 
 func (x *PhaseDefinition) Reset() {
 	*x = PhaseDefinition{}
-	mi := &file_worker_v1_worker_proto_msgTypes[5]
+	mi := &file_worker_v1_worker_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -562,7 +776,7 @@ func (x *PhaseDefinition) String() string {
 func (*PhaseDefinition) ProtoMessage() {}
 
 func (x *PhaseDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[5]
+	mi := &file_worker_v1_worker_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -575,7 +789,7 @@ func (x *PhaseDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PhaseDefinition.ProtoReflect.Descriptor instead.
 func (*PhaseDefinition) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{5}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *PhaseDefinition) GetId() string {
@@ -623,7 +837,7 @@ type TaskPhase struct {
 
 func (x *TaskPhase) Reset() {
 	*x = TaskPhase{}
-	mi := &file_worker_v1_worker_proto_msgTypes[6]
+	mi := &file_worker_v1_worker_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -635,7 +849,7 @@ func (x *TaskPhase) String() string {
 func (*TaskPhase) ProtoMessage() {}
 
 func (x *TaskPhase) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[6]
+	mi := &file_worker_v1_worker_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -648,7 +862,7 @@ func (x *TaskPhase) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskPhase.ProtoReflect.Descriptor instead.
 func (*TaskPhase) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{6}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *TaskPhase) GetDefinition() *PhaseDefinition {
@@ -675,7 +889,7 @@ type Workflow struct {
 
 func (x *Workflow) Reset() {
 	*x = Workflow{}
-	mi := &file_worker_v1_worker_proto_msgTypes[7]
+	mi := &file_worker_v1_worker_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -687,7 +901,7 @@ func (x *Workflow) String() string {
 func (*Workflow) ProtoMessage() {}
 
 func (x *Workflow) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[7]
+	mi := &file_worker_v1_worker_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -700,7 +914,7 @@ func (x *Workflow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Workflow.ProtoReflect.Descriptor instead.
 func (*Workflow) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{7}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *Workflow) GetPhases() []*PhaseDefinition {
@@ -728,7 +942,7 @@ type WorkspaceInfo struct {
 
 func (x *WorkspaceInfo) Reset() {
 	*x = WorkspaceInfo{}
-	mi := &file_worker_v1_worker_proto_msgTypes[8]
+	mi := &file_worker_v1_worker_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -740,7 +954,7 @@ func (x *WorkspaceInfo) String() string {
 func (*WorkspaceInfo) ProtoMessage() {}
 
 func (x *WorkspaceInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[8]
+	mi := &file_worker_v1_worker_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -753,7 +967,7 @@ func (x *WorkspaceInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkspaceInfo.ProtoReflect.Descriptor instead.
 func (*WorkspaceInfo) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{8}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *WorkspaceInfo) GetId() string {
@@ -793,7 +1007,7 @@ type UpdateTaskRequest struct {
 
 func (x *UpdateTaskRequest) Reset() {
 	*x = UpdateTaskRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[9]
+	mi := &file_worker_v1_worker_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -805,7 +1019,7 @@ func (x *UpdateTaskRequest) String() string {
 func (*UpdateTaskRequest) ProtoMessage() {}
 
 func (x *UpdateTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[9]
+	mi := &file_worker_v1_worker_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -818,7 +1032,7 @@ func (x *UpdateTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateTaskRequest.ProtoReflect.Descriptor instead.
 func (*UpdateTaskRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{9}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *UpdateTaskRequest) GetId() string {
@@ -887,7 +1101,7 @@ type UpdateWorkflowRequest struct {
 
 func (x *UpdateWorkflowRequest) Reset() {
 	*x = UpdateWorkflowRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[10]
+	mi := &file_worker_v1_worker_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -899,7 +1113,7 @@ func (x *UpdateWorkflowRequest) String() string {
 func (*UpdateWorkflowRequest) ProtoMessage() {}
 
 func (x *UpdateWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[10]
+	mi := &file_worker_v1_worker_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -912,7 +1126,7 @@ func (x *UpdateWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*UpdateWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{10}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UpdateWorkflowRequest) GetWorkflow() *Workflow {
@@ -943,7 +1157,7 @@ type Document struct {
 
 func (x *Document) Reset() {
 	*x = Document{}
-	mi := &file_worker_v1_worker_proto_msgTypes[11]
+	mi := &file_worker_v1_worker_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -955,7 +1169,7 @@ func (x *Document) String() string {
 func (*Document) ProtoMessage() {}
 
 func (x *Document) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[11]
+	mi := &file_worker_v1_worker_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -968,7 +1182,7 @@ func (x *Document) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Document.ProtoReflect.Descriptor instead.
 func (*Document) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{11}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Document) GetId() string {
@@ -1023,7 +1237,7 @@ type ListTasksResponse struct {
 
 func (x *ListTasksResponse) Reset() {
 	*x = ListTasksResponse{}
-	mi := &file_worker_v1_worker_proto_msgTypes[12]
+	mi := &file_worker_v1_worker_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1035,7 +1249,7 @@ func (x *ListTasksResponse) String() string {
 func (*ListTasksResponse) ProtoMessage() {}
 
 func (x *ListTasksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[12]
+	mi := &file_worker_v1_worker_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1048,7 +1262,7 @@ func (x *ListTasksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTasksResponse.ProtoReflect.Descriptor instead.
 func (*ListTasksResponse) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{12}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListTasksResponse) GetTasks() []*Task {
@@ -1074,7 +1288,7 @@ type CreateTaskRequest struct {
 
 func (x *CreateTaskRequest) Reset() {
 	*x = CreateTaskRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[13]
+	mi := &file_worker_v1_worker_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1086,7 +1300,7 @@ func (x *CreateTaskRequest) String() string {
 func (*CreateTaskRequest) ProtoMessage() {}
 
 func (x *CreateTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[13]
+	mi := &file_worker_v1_worker_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1099,7 +1313,7 @@ func (x *CreateTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTaskRequest.ProtoReflect.Descriptor instead.
 func (*CreateTaskRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{13}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *CreateTaskRequest) GetName() string {
@@ -1118,7 +1332,7 @@ type TaskRequest struct {
 
 func (x *TaskRequest) Reset() {
 	*x = TaskRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[14]
+	mi := &file_worker_v1_worker_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1130,7 +1344,7 @@ func (x *TaskRequest) String() string {
 func (*TaskRequest) ProtoMessage() {}
 
 func (x *TaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[14]
+	mi := &file_worker_v1_worker_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1143,7 +1357,7 @@ func (x *TaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskRequest.ProtoReflect.Descriptor instead.
 func (*TaskRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{14}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *TaskRequest) GetTaskId() string {
@@ -1163,7 +1377,7 @@ type RenameTaskRequest struct {
 
 func (x *RenameTaskRequest) Reset() {
 	*x = RenameTaskRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[15]
+	mi := &file_worker_v1_worker_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1175,7 +1389,7 @@ func (x *RenameTaskRequest) String() string {
 func (*RenameTaskRequest) ProtoMessage() {}
 
 func (x *RenameTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[15]
+	mi := &file_worker_v1_worker_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1188,7 +1402,7 @@ func (x *RenameTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenameTaskRequest.ProtoReflect.Descriptor instead.
 func (*RenameTaskRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{15}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *RenameTaskRequest) GetTaskId() string {
@@ -1215,7 +1429,7 @@ type CreateDocumentRequest struct {
 
 func (x *CreateDocumentRequest) Reset() {
 	*x = CreateDocumentRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[16]
+	mi := &file_worker_v1_worker_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1227,7 +1441,7 @@ func (x *CreateDocumentRequest) String() string {
 func (*CreateDocumentRequest) ProtoMessage() {}
 
 func (x *CreateDocumentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[16]
+	mi := &file_worker_v1_worker_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1240,7 +1454,7 @@ func (x *CreateDocumentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateDocumentRequest.ProtoReflect.Descriptor instead.
 func (*CreateDocumentRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{16}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *CreateDocumentRequest) GetTaskId() string {
@@ -1267,7 +1481,7 @@ type DocumentRequest struct {
 
 func (x *DocumentRequest) Reset() {
 	*x = DocumentRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[17]
+	mi := &file_worker_v1_worker_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1279,7 +1493,7 @@ func (x *DocumentRequest) String() string {
 func (*DocumentRequest) ProtoMessage() {}
 
 func (x *DocumentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[17]
+	mi := &file_worker_v1_worker_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1292,7 +1506,7 @@ func (x *DocumentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DocumentRequest.ProtoReflect.Descriptor instead.
 func (*DocumentRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{17}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *DocumentRequest) GetTaskId() string {
@@ -1320,7 +1534,7 @@ type RenameDocumentRequest struct {
 
 func (x *RenameDocumentRequest) Reset() {
 	*x = RenameDocumentRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[18]
+	mi := &file_worker_v1_worker_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1332,7 +1546,7 @@ func (x *RenameDocumentRequest) String() string {
 func (*RenameDocumentRequest) ProtoMessage() {}
 
 func (x *RenameDocumentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[18]
+	mi := &file_worker_v1_worker_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1345,7 +1559,7 @@ func (x *RenameDocumentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenameDocumentRequest.ProtoReflect.Descriptor instead.
 func (*RenameDocumentRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{18}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *RenameDocumentRequest) GetTaskId() string {
@@ -1381,7 +1595,7 @@ type UpdateDocumentRequest struct {
 
 func (x *UpdateDocumentRequest) Reset() {
 	*x = UpdateDocumentRequest{}
-	mi := &file_worker_v1_worker_proto_msgTypes[19]
+	mi := &file_worker_v1_worker_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1393,7 +1607,7 @@ func (x *UpdateDocumentRequest) String() string {
 func (*UpdateDocumentRequest) ProtoMessage() {}
 
 func (x *UpdateDocumentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_worker_v1_worker_proto_msgTypes[19]
+	mi := &file_worker_v1_worker_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1406,7 +1620,7 @@ func (x *UpdateDocumentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDocumentRequest.ProtoReflect.Descriptor instead.
 func (*UpdateDocumentRequest) Descriptor() ([]byte, []int) {
-	return file_worker_v1_worker_proto_rawDescGZIP(), []int{19}
+	return file_worker_v1_worker_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *UpdateDocumentRequest) GetTaskId() string {
@@ -1445,7 +1659,7 @@ const file_worker_v1_worker_proto_rawDesc = "" +
 	"\x0fDocumentSummary\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
-	"\bfilename\x18\x03 \x01(\tR\bfilename\"\xa2\x04\n" +
+	"\bfilename\x18\x03 \x01(\tR\bfilename\"\xd1\x04\n" +
 	"\x04Task\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x128\n" +
@@ -1461,26 +1675,42 @@ const file_worker_v1_worker_proto_rawDesc = "" +
 	" \x01(\tR\x0ecurrentPhaseId\x12,\n" +
 	"\x06phases\x18\v \x03(\v2\x14.worker.v1.TaskPhaseR\x06phases\x12\x1a\n" +
 	"\brevision\x18\f \x01(\tR\brevision\x12\x16\n" +
-	"\x06number\x18\r \x01(\x05R\x06number\x12.\n" +
-	"\bsubtasks\x18\x0e \x03(\v2\x12.worker.v1.SubtaskR\bsubtasksJ\x04\b\t\x10\n" +
-	"\"\x85\x01\n" +
-	"\aSubtask\x12\x16\n" +
+	"\x06number\x18\r \x01(\x05R\x06number\x121\n" +
+	"\tsubphases\x18\x0e \x03(\v2\x13.worker.v1.SubphaseR\tsubphases\x12*\n" +
+	"\x05links\x18\x0f \x03(\v2\x14.worker.v1.PhaseLinkR\x05linksJ\x04\b\t\x10\n" +
+	"\"\x86\x01\n" +
+	"\bSubphase\x12\x16\n" +
 	"\x06number\x18\x01 \x01(\x05R\x06number\x12\x19\n" +
 	"\bphase_id\x18\x02 \x01(\tR\aphaseId\x12\x1f\n" +
 	"\vdocument_id\x18\x03 \x01(\tR\n" +
 	"documentId\x12\x12\n" +
 	"\x04name\x18\x04 \x01(\tR\x04name\x12\x12\n" +
-	"\x04done\x18\x05 \x01(\bR\x04done\"z\n" +
-	"\x14CreateSubtaskRequest\x12\x17\n" +
+	"\x04done\x18\x05 \x01(\bR\x04done\"{\n" +
+	"\x15CreateSubphaseRequest\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x19\n" +
 	"\bphase_id\x18\x02 \x01(\tR\aphaseId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1a\n" +
-	"\brevision\x18\x04 \x01(\tR\brevision\"w\n" +
-	"\x14UpdateSubtaskRequest\x12\x17\n" +
+	"\brevision\x18\x04 \x01(\tR\brevision\"x\n" +
+	"\x15UpdateSubphaseRequest\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\x05R\x06number\x12\x12\n" +
 	"\x04done\x18\x03 \x01(\bR\x04done\x12\x1a\n" +
-	"\brevision\x18\x04 \x01(\tR\brevision\"\xa6\x01\n" +
+	"\brevision\x18\x04 \x01(\tR\brevision\"f\n" +
+	"\tPhaseLink\x12\x16\n" +
+	"\x06number\x18\x01 \x01(\x05R\x06number\x12\x19\n" +
+	"\bphase_id\x18\x02 \x01(\tR\aphaseId\x12\x10\n" +
+	"\x03url\x18\x03 \x01(\tR\x03url\x12\x14\n" +
+	"\x05title\x18\x04 \x01(\tR\x05title\"\x90\x01\n" +
+	"\x16CreatePhaseLinkRequest\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x19\n" +
+	"\bphase_id\x18\x02 \x01(\tR\aphaseId\x12\x10\n" +
+	"\x03url\x18\x03 \x01(\tR\x03url\x12\x14\n" +
+	"\x05title\x18\x04 \x01(\tR\x05title\x12\x1a\n" +
+	"\brevision\x18\x05 \x01(\tR\brevision\"e\n" +
+	"\x16DeletePhaseLinkRequest\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x16\n" +
+	"\x06number\x18\x02 \x01(\x05R\x06number\x12\x1a\n" +
+	"\brevision\x18\x03 \x01(\tR\brevision\"\xa6\x01\n" +
 	"\x0fPhaseDefinition\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -1557,10 +1787,12 @@ const file_worker_v1_worker_proto_rawDesc = "" +
 	"\x14TASK_STATUS_ARCHIVED\x10\x04*>\n" +
 	"\vAgentStatus\x12\x15\n" +
 	"\x11AGENT_STATUS_NONE\x10\x00\x12\x18\n" +
-	"\x14AGENT_STATUS_WORKING\x10\x012\xdb\b\n" +
-	"\x10WorkspaceService\x12C\n" +
-	"\rCreateSubtask\x12\x1f.worker.v1.CreateSubtaskRequest\x1a\x0f.worker.v1.Task\"\x00\x12C\n" +
-	"\rUpdateSubtask\x12\x1f.worker.v1.UpdateSubtaskRequest\x1a\x0f.worker.v1.Task\"\x00\x12E\n" +
+	"\x14AGENT_STATUS_WORKING\x10\x012\xf1\t\n" +
+	"\x10WorkspaceService\x12E\n" +
+	"\x0eCreateSubphase\x12 .worker.v1.CreateSubphaseRequest\x1a\x0f.worker.v1.Task\"\x00\x12E\n" +
+	"\x0eUpdateSubphase\x12 .worker.v1.UpdateSubphaseRequest\x1a\x0f.worker.v1.Task\"\x00\x12G\n" +
+	"\x0fCreatePhaseLink\x12!.worker.v1.CreatePhaseLinkRequest\x1a\x0f.worker.v1.Task\"\x00\x12G\n" +
+	"\x0fDeletePhaseLink\x12!.worker.v1.DeletePhaseLinkRequest\x1a\x0f.worker.v1.Task\"\x00\x12E\n" +
 	"\fGetWorkspace\x12\x16.google.protobuf.Empty\x1a\x18.worker.v1.WorkspaceInfo\"\x03\x90\x02\x01\x127\n" +
 	"\aGetTask\x12\x16.worker.v1.TaskRequest\x1a\x0f.worker.v1.Task\"\x03\x90\x02\x01\x12=\n" +
 	"\n" +
@@ -1593,86 +1825,94 @@ func file_worker_v1_worker_proto_rawDescGZIP() []byte {
 }
 
 var file_worker_v1_worker_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_worker_v1_worker_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_worker_v1_worker_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_worker_v1_worker_proto_goTypes = []any{
-	(TaskStatus)(0),               // 0: worker.v1.TaskStatus
-	(AgentStatus)(0),              // 1: worker.v1.AgentStatus
-	(*DocumentSummary)(nil),       // 2: worker.v1.DocumentSummary
-	(*Task)(nil),                  // 3: worker.v1.Task
-	(*Subtask)(nil),               // 4: worker.v1.Subtask
-	(*CreateSubtaskRequest)(nil),  // 5: worker.v1.CreateSubtaskRequest
-	(*UpdateSubtaskRequest)(nil),  // 6: worker.v1.UpdateSubtaskRequest
-	(*PhaseDefinition)(nil),       // 7: worker.v1.PhaseDefinition
-	(*TaskPhase)(nil),             // 8: worker.v1.TaskPhase
-	(*Workflow)(nil),              // 9: worker.v1.Workflow
-	(*WorkspaceInfo)(nil),         // 10: worker.v1.WorkspaceInfo
-	(*UpdateTaskRequest)(nil),     // 11: worker.v1.UpdateTaskRequest
-	(*UpdateWorkflowRequest)(nil), // 12: worker.v1.UpdateWorkflowRequest
-	(*Document)(nil),              // 13: worker.v1.Document
-	(*ListTasksResponse)(nil),     // 14: worker.v1.ListTasksResponse
-	(*CreateTaskRequest)(nil),     // 15: worker.v1.CreateTaskRequest
-	(*TaskRequest)(nil),           // 16: worker.v1.TaskRequest
-	(*RenameTaskRequest)(nil),     // 17: worker.v1.RenameTaskRequest
-	(*CreateDocumentRequest)(nil), // 18: worker.v1.CreateDocumentRequest
-	(*DocumentRequest)(nil),       // 19: worker.v1.DocumentRequest
-	(*RenameDocumentRequest)(nil), // 20: worker.v1.RenameDocumentRequest
-	(*UpdateDocumentRequest)(nil), // 21: worker.v1.UpdateDocumentRequest
-	(*timestamppb.Timestamp)(nil), // 22: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil), // 23: google.protobuf.FieldMask
-	(*emptypb.Empty)(nil),         // 24: google.protobuf.Empty
+	(TaskStatus)(0),                // 0: worker.v1.TaskStatus
+	(AgentStatus)(0),               // 1: worker.v1.AgentStatus
+	(*DocumentSummary)(nil),        // 2: worker.v1.DocumentSummary
+	(*Task)(nil),                   // 3: worker.v1.Task
+	(*Subphase)(nil),               // 4: worker.v1.Subphase
+	(*CreateSubphaseRequest)(nil),  // 5: worker.v1.CreateSubphaseRequest
+	(*UpdateSubphaseRequest)(nil),  // 6: worker.v1.UpdateSubphaseRequest
+	(*PhaseLink)(nil),              // 7: worker.v1.PhaseLink
+	(*CreatePhaseLinkRequest)(nil), // 8: worker.v1.CreatePhaseLinkRequest
+	(*DeletePhaseLinkRequest)(nil), // 9: worker.v1.DeletePhaseLinkRequest
+	(*PhaseDefinition)(nil),        // 10: worker.v1.PhaseDefinition
+	(*TaskPhase)(nil),              // 11: worker.v1.TaskPhase
+	(*Workflow)(nil),               // 12: worker.v1.Workflow
+	(*WorkspaceInfo)(nil),          // 13: worker.v1.WorkspaceInfo
+	(*UpdateTaskRequest)(nil),      // 14: worker.v1.UpdateTaskRequest
+	(*UpdateWorkflowRequest)(nil),  // 15: worker.v1.UpdateWorkflowRequest
+	(*Document)(nil),               // 16: worker.v1.Document
+	(*ListTasksResponse)(nil),      // 17: worker.v1.ListTasksResponse
+	(*CreateTaskRequest)(nil),      // 18: worker.v1.CreateTaskRequest
+	(*TaskRequest)(nil),            // 19: worker.v1.TaskRequest
+	(*RenameTaskRequest)(nil),      // 20: worker.v1.RenameTaskRequest
+	(*CreateDocumentRequest)(nil),  // 21: worker.v1.CreateDocumentRequest
+	(*DocumentRequest)(nil),        // 22: worker.v1.DocumentRequest
+	(*RenameDocumentRequest)(nil),  // 23: worker.v1.RenameDocumentRequest
+	(*UpdateDocumentRequest)(nil),  // 24: worker.v1.UpdateDocumentRequest
+	(*timestamppb.Timestamp)(nil),  // 25: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),  // 26: google.protobuf.FieldMask
+	(*emptypb.Empty)(nil),          // 27: google.protobuf.Empty
 }
 var file_worker_v1_worker_proto_depIdxs = []int32{
 	2,  // 0: worker.v1.Task.documents:type_name -> worker.v1.DocumentSummary
-	22, // 1: worker.v1.Task.created_at:type_name -> google.protobuf.Timestamp
-	22, // 2: worker.v1.Task.updated_at:type_name -> google.protobuf.Timestamp
+	25, // 1: worker.v1.Task.created_at:type_name -> google.protobuf.Timestamp
+	25, // 2: worker.v1.Task.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 3: worker.v1.Task.status:type_name -> worker.v1.TaskStatus
 	1,  // 4: worker.v1.Task.agent_status:type_name -> worker.v1.AgentStatus
-	8,  // 5: worker.v1.Task.phases:type_name -> worker.v1.TaskPhase
-	4,  // 6: worker.v1.Task.subtasks:type_name -> worker.v1.Subtask
-	7,  // 7: worker.v1.TaskPhase.definition:type_name -> worker.v1.PhaseDefinition
-	7,  // 8: worker.v1.Workflow.phases:type_name -> worker.v1.PhaseDefinition
-	0,  // 9: worker.v1.UpdateTaskRequest.status:type_name -> worker.v1.TaskStatus
-	1,  // 10: worker.v1.UpdateTaskRequest.agent_status:type_name -> worker.v1.AgentStatus
-	23, // 11: worker.v1.UpdateTaskRequest.update_mask:type_name -> google.protobuf.FieldMask
-	9,  // 12: worker.v1.UpdateWorkflowRequest.workflow:type_name -> worker.v1.Workflow
-	3,  // 13: worker.v1.ListTasksResponse.tasks:type_name -> worker.v1.Task
-	5,  // 14: worker.v1.WorkspaceService.CreateSubtask:input_type -> worker.v1.CreateSubtaskRequest
-	6,  // 15: worker.v1.WorkspaceService.UpdateSubtask:input_type -> worker.v1.UpdateSubtaskRequest
-	24, // 16: worker.v1.WorkspaceService.GetWorkspace:input_type -> google.protobuf.Empty
-	16, // 17: worker.v1.WorkspaceService.GetTask:input_type -> worker.v1.TaskRequest
-	11, // 18: worker.v1.WorkspaceService.UpdateTask:input_type -> worker.v1.UpdateTaskRequest
-	24, // 19: worker.v1.WorkspaceService.GetWorkflow:input_type -> google.protobuf.Empty
-	12, // 20: worker.v1.WorkspaceService.UpdateWorkflow:input_type -> worker.v1.UpdateWorkflowRequest
-	24, // 21: worker.v1.WorkspaceService.ListTasks:input_type -> google.protobuf.Empty
-	15, // 22: worker.v1.WorkspaceService.CreateTask:input_type -> worker.v1.CreateTaskRequest
-	17, // 23: worker.v1.WorkspaceService.RenameTask:input_type -> worker.v1.RenameTaskRequest
-	16, // 24: worker.v1.WorkspaceService.DeleteTask:input_type -> worker.v1.TaskRequest
-	18, // 25: worker.v1.WorkspaceService.CreateDocument:input_type -> worker.v1.CreateDocumentRequest
-	19, // 26: worker.v1.WorkspaceService.GetDocument:input_type -> worker.v1.DocumentRequest
-	20, // 27: worker.v1.WorkspaceService.RenameDocument:input_type -> worker.v1.RenameDocumentRequest
-	21, // 28: worker.v1.WorkspaceService.UpdateDocument:input_type -> worker.v1.UpdateDocumentRequest
-	19, // 29: worker.v1.WorkspaceService.DeleteDocument:input_type -> worker.v1.DocumentRequest
-	3,  // 30: worker.v1.WorkspaceService.CreateSubtask:output_type -> worker.v1.Task
-	3,  // 31: worker.v1.WorkspaceService.UpdateSubtask:output_type -> worker.v1.Task
-	10, // 32: worker.v1.WorkspaceService.GetWorkspace:output_type -> worker.v1.WorkspaceInfo
-	3,  // 33: worker.v1.WorkspaceService.GetTask:output_type -> worker.v1.Task
-	3,  // 34: worker.v1.WorkspaceService.UpdateTask:output_type -> worker.v1.Task
-	9,  // 35: worker.v1.WorkspaceService.GetWorkflow:output_type -> worker.v1.Workflow
-	9,  // 36: worker.v1.WorkspaceService.UpdateWorkflow:output_type -> worker.v1.Workflow
-	14, // 37: worker.v1.WorkspaceService.ListTasks:output_type -> worker.v1.ListTasksResponse
-	3,  // 38: worker.v1.WorkspaceService.CreateTask:output_type -> worker.v1.Task
-	3,  // 39: worker.v1.WorkspaceService.RenameTask:output_type -> worker.v1.Task
-	24, // 40: worker.v1.WorkspaceService.DeleteTask:output_type -> google.protobuf.Empty
-	13, // 41: worker.v1.WorkspaceService.CreateDocument:output_type -> worker.v1.Document
-	13, // 42: worker.v1.WorkspaceService.GetDocument:output_type -> worker.v1.Document
-	13, // 43: worker.v1.WorkspaceService.RenameDocument:output_type -> worker.v1.Document
-	13, // 44: worker.v1.WorkspaceService.UpdateDocument:output_type -> worker.v1.Document
-	24, // 45: worker.v1.WorkspaceService.DeleteDocument:output_type -> google.protobuf.Empty
-	30, // [30:46] is the sub-list for method output_type
-	14, // [14:30] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	11, // 5: worker.v1.Task.phases:type_name -> worker.v1.TaskPhase
+	4,  // 6: worker.v1.Task.subphases:type_name -> worker.v1.Subphase
+	7,  // 7: worker.v1.Task.links:type_name -> worker.v1.PhaseLink
+	10, // 8: worker.v1.TaskPhase.definition:type_name -> worker.v1.PhaseDefinition
+	10, // 9: worker.v1.Workflow.phases:type_name -> worker.v1.PhaseDefinition
+	0,  // 10: worker.v1.UpdateTaskRequest.status:type_name -> worker.v1.TaskStatus
+	1,  // 11: worker.v1.UpdateTaskRequest.agent_status:type_name -> worker.v1.AgentStatus
+	26, // 12: worker.v1.UpdateTaskRequest.update_mask:type_name -> google.protobuf.FieldMask
+	12, // 13: worker.v1.UpdateWorkflowRequest.workflow:type_name -> worker.v1.Workflow
+	3,  // 14: worker.v1.ListTasksResponse.tasks:type_name -> worker.v1.Task
+	5,  // 15: worker.v1.WorkspaceService.CreateSubphase:input_type -> worker.v1.CreateSubphaseRequest
+	6,  // 16: worker.v1.WorkspaceService.UpdateSubphase:input_type -> worker.v1.UpdateSubphaseRequest
+	8,  // 17: worker.v1.WorkspaceService.CreatePhaseLink:input_type -> worker.v1.CreatePhaseLinkRequest
+	9,  // 18: worker.v1.WorkspaceService.DeletePhaseLink:input_type -> worker.v1.DeletePhaseLinkRequest
+	27, // 19: worker.v1.WorkspaceService.GetWorkspace:input_type -> google.protobuf.Empty
+	19, // 20: worker.v1.WorkspaceService.GetTask:input_type -> worker.v1.TaskRequest
+	14, // 21: worker.v1.WorkspaceService.UpdateTask:input_type -> worker.v1.UpdateTaskRequest
+	27, // 22: worker.v1.WorkspaceService.GetWorkflow:input_type -> google.protobuf.Empty
+	15, // 23: worker.v1.WorkspaceService.UpdateWorkflow:input_type -> worker.v1.UpdateWorkflowRequest
+	27, // 24: worker.v1.WorkspaceService.ListTasks:input_type -> google.protobuf.Empty
+	18, // 25: worker.v1.WorkspaceService.CreateTask:input_type -> worker.v1.CreateTaskRequest
+	20, // 26: worker.v1.WorkspaceService.RenameTask:input_type -> worker.v1.RenameTaskRequest
+	19, // 27: worker.v1.WorkspaceService.DeleteTask:input_type -> worker.v1.TaskRequest
+	21, // 28: worker.v1.WorkspaceService.CreateDocument:input_type -> worker.v1.CreateDocumentRequest
+	22, // 29: worker.v1.WorkspaceService.GetDocument:input_type -> worker.v1.DocumentRequest
+	23, // 30: worker.v1.WorkspaceService.RenameDocument:input_type -> worker.v1.RenameDocumentRequest
+	24, // 31: worker.v1.WorkspaceService.UpdateDocument:input_type -> worker.v1.UpdateDocumentRequest
+	22, // 32: worker.v1.WorkspaceService.DeleteDocument:input_type -> worker.v1.DocumentRequest
+	3,  // 33: worker.v1.WorkspaceService.CreateSubphase:output_type -> worker.v1.Task
+	3,  // 34: worker.v1.WorkspaceService.UpdateSubphase:output_type -> worker.v1.Task
+	3,  // 35: worker.v1.WorkspaceService.CreatePhaseLink:output_type -> worker.v1.Task
+	3,  // 36: worker.v1.WorkspaceService.DeletePhaseLink:output_type -> worker.v1.Task
+	13, // 37: worker.v1.WorkspaceService.GetWorkspace:output_type -> worker.v1.WorkspaceInfo
+	3,  // 38: worker.v1.WorkspaceService.GetTask:output_type -> worker.v1.Task
+	3,  // 39: worker.v1.WorkspaceService.UpdateTask:output_type -> worker.v1.Task
+	12, // 40: worker.v1.WorkspaceService.GetWorkflow:output_type -> worker.v1.Workflow
+	12, // 41: worker.v1.WorkspaceService.UpdateWorkflow:output_type -> worker.v1.Workflow
+	17, // 42: worker.v1.WorkspaceService.ListTasks:output_type -> worker.v1.ListTasksResponse
+	3,  // 43: worker.v1.WorkspaceService.CreateTask:output_type -> worker.v1.Task
+	3,  // 44: worker.v1.WorkspaceService.RenameTask:output_type -> worker.v1.Task
+	27, // 45: worker.v1.WorkspaceService.DeleteTask:output_type -> google.protobuf.Empty
+	16, // 46: worker.v1.WorkspaceService.CreateDocument:output_type -> worker.v1.Document
+	16, // 47: worker.v1.WorkspaceService.GetDocument:output_type -> worker.v1.Document
+	16, // 48: worker.v1.WorkspaceService.RenameDocument:output_type -> worker.v1.Document
+	16, // 49: worker.v1.WorkspaceService.UpdateDocument:output_type -> worker.v1.Document
+	27, // 50: worker.v1.WorkspaceService.DeleteDocument:output_type -> google.protobuf.Empty
+	33, // [33:51] is the sub-list for method output_type
+	15, // [15:33] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_worker_v1_worker_proto_init() }
@@ -1686,7 +1926,7 @@ func file_worker_v1_worker_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_worker_v1_worker_proto_rawDesc), len(file_worker_v1_worker_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   20,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

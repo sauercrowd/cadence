@@ -108,9 +108,9 @@ select {
 }
 button:focus-visible,
 a:focus-visible,
-input:focus,
-select:focus,
-textarea:focus,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
 [role="option"]:focus-visible {
   outline: var(--focus-width) solid var(--structure);
   outline-offset: var(--focus-offset);
@@ -919,12 +919,16 @@ body[data-keys="on"] .task-row.cursor::after {
   display: flex;
   flex-direction: column;
 }
+.phase-group {
+  position: relative;
+}
 .phase-nav-item {
   position: relative;
   display: flex;
   align-items: center;
   gap: 7px;
   min-width: 0;
+  min-height: var(--row);
   padding: 2px 6px;
   border-radius: var(--r);
   color: var(--muted);
@@ -961,24 +965,91 @@ body[data-keys="on"] .task-row.cursor::after {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.subtask-nav {
+/* Indented clear of the timeline rail, which is the only vertical line here. */
+.subphase-nav {
   display: flex;
   align-items: center;
-  gap: var(--s1);
+  gap: 5px;
   min-width: 0;
-  min-height: var(--row);
-  margin-left: var(--s4);
+  min-height: 22px;
+  margin-left: 20px;
   padding: 0 var(--s1);
-  border-left: var(--focus-width) solid var(--rule);
+  border-radius: var(--r);
+  color: var(--muted);
 }
-.subtask-nav.selected {
+.subphase-nav:hover {
+  background: var(--hover);
+}
+.subphase-nav.selected {
   background: var(--structure-soft);
   color: var(--structure);
 }
-.subtask-nav input {
+.subphase-nav input {
   margin: 0;
   accent-color: var(--structure);
   flex-shrink: 0;
+}
+.phase-nav-label.is-complete > span:not(.task-code) {
+  text-decoration: line-through;
+  color: var(--faint);
+}
+
+.link-nav-item {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 22px;
+  padding: 0 var(--s1) 0 6px;
+  border-radius: var(--r);
+  color: var(--muted);
+}
+.link-nav-item:hover {
+  background: var(--hover);
+}
+.link-nav-item .icon-button {
+  opacity: 0;
+}
+.link-nav-item:hover .icon-button,
+.link-nav-item .icon-button:focus-visible {
+  opacity: 1;
+}
+.link-nav-open {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-ui);
+  color: inherit;
+  text-align: left;
+}
+.link-nav-open > span:not(.task-code) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.link-nav-open svg {
+  flex-shrink: 0;
+  color: var(--faint);
+}
+.link-nav-item:hover .link-nav-open {
+  color: var(--ink);
+}
+.link-empty {
+  padding: 0 6px;
+  font-size: var(--fs-ui);
+  color: var(--faint);
+}
+/* Must out-specify `[role="option"] span`, which stretches every child. */
+.task-switcher-results [role="option"] .task-code {
+  flex: 0 0 auto;
+}
+.task-switcher-results [role="option"] .link-url {
+  flex: 0 1 auto;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  color: var(--faint);
 }
 
 /* Numbered badge doubles as the "make current" control. */
@@ -1048,16 +1119,32 @@ body[data-keys="on"] .task-row.cursor::after {
   background: var(--signal-soft);
   color: var(--signal);
 }
-.phase-timeline .phase-nav-item:not(:last-child)::after {
+/* One unbroken rail down the badges. Each group draws the segment below its
+   own badge and the stub above it, so subphase rows of any height cannot
+   leave a gap. The amber run stops at the current badge. */
+.phase-group::before,
+.phase-group::after {
   content: "";
   position: absolute;
   left: 13.5px; /* 6px padding + half of the 16px badge */
-  top: 50%;
-  bottom: -50%;
   width: 1px;
   background: var(--rule);
 }
-.phase-timeline .phase-nav-item.is-done::after {
+.phase-group::before {
+  top: 13px; /* half of the --row-tall phase row */
+  bottom: 0;
+}
+.phase-group::after {
+  top: 0;
+  height: 13px;
+}
+.phase-group:last-child::before,
+.phase-group:first-child::after {
+  display: none;
+}
+.phase-group.is-done::before,
+.phase-group.is-done::after,
+.phase-group.is-current::after {
   background: var(--signal);
 }
 
@@ -1174,13 +1261,17 @@ body[data-keys="on"] .task-row.cursor::after {
   text-transform: uppercase;
   color: var(--faint);
 }
+/* Floats over the selection, so it is reachable at any scroll position. */
 .format-toolbar {
+  z-index: 60;
   display: flex;
   align-items: center;
   gap: 1px;
-  padding: 3px 0;
-  margin-bottom: var(--s4);
-  border-bottom: 1px solid var(--rule);
+  padding: 3px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--surface);
+  box-shadow: 0 6px 18px rgb(16 24 32 / 14%);
 }
 .format-toolbar button {
   display: grid;
@@ -1221,13 +1312,6 @@ body[data-keys="on"] .task-row.cursor::after {
   color: var(--ink-2);
   overflow-wrap: break-word;
   caret-color: var(--structure);
-}
-.rich-editor:focus {
-  outline: var(--focus-width) solid var(--structure);
-  outline-offset: var(--focus-offset);
-}
-.phase-workspace:has(.rich-editor:focus, .cm-content:focus) .phase-header {
-  border-bottom-color: var(--structure);
 }
 .editor-h1 {
   margin: 4px 0 var(--s4);
@@ -1428,8 +1512,7 @@ body[data-keys="on"] .task-row.cursor::after {
   font-size: 12px;
 }
 .source-editor .cm-focused {
-  outline: var(--focus-width) solid var(--structure);
-  outline-offset: var(--focus-offset);
+  outline: none;
   border-color: var(--structure);
 }
 .source-editor .cm-gutters {
@@ -1579,11 +1662,15 @@ body[data-keys="on"] .task-row.cursor::after {
    ========================================================================== */
 
 .modal {
+  display: flex;
+  flex-direction: column;
   width: 440px;
   max-width: calc(100vw - 32px);
   max-height: 85vh;
   padding: 0;
-  overflow: auto;
+  /* Visible so the "/" property picker can hang past the dialog edge; only
+     the one dialog with long content scrolls, and it scrolls its own body. */
+  overflow: visible;
   border: 1px solid var(--rule);
   border-radius: var(--r);
   background: var(--surface);
@@ -1609,6 +1696,13 @@ body[data-keys="on"] .task-row.cursor::after {
 }
 .modal-content {
   padding: var(--s3);
+}
+.modal.wide .modal-content {
+  min-height: 0;
+  overflow: auto;
+}
+.modal label + .stacked-field {
+  margin-top: var(--s3);
 }
 .modal-content > p {
   margin-bottom: var(--s3);

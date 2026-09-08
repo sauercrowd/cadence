@@ -89,7 +89,7 @@ func TestJSONImportIsAtomicAndIdempotent(t *testing.T) {
 	}
 }
 
-func TestNumbersAndSubtasksPersist(t *testing.T) {
+func TestNumbersAndSubphasesPersist(t *testing.T) {
 	root := t.TempDir()
 	s, err := NewStore(root)
 	if err != nil {
@@ -142,23 +142,23 @@ func TestNumbersAndSubtasksPersist(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	first, err = s.CreateSubtask(first.ID, "implement", "Build storage", first.Revision)
+	first, err = s.CreateSubphase(first.ID, "implement", "Build storage", first.Revision)
 	if err != nil {
 		t.Fatal(err)
 	}
-	step := first.Subtasks[0]
-	if len(first.Subtasks) != 1 || step.Done {
-		t.Fatal("invalid new subtask")
+	sub := first.Subphases[0]
+	if len(first.Subphases) != 1 || sub.Done {
+		t.Fatal("invalid new subphase")
 	}
-	completed, err := s.UpdateSubtask(first.ID, step.Number, true, first.Revision)
+	completed, err := s.UpdateSubphase(first.ID, sub.Number, true, first.Revision)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.UpdateSubtask(first.ID, step.Number, false, first.Revision); !errors.Is(err, ErrConflict) {
-		t.Fatal("stale subtask write accepted")
+	if _, err := s.UpdateSubphase(first.ID, sub.Number, false, first.Revision); !errors.Is(err, ErrConflict) {
+		t.Fatal("stale subphase write accepted")
 	}
-	if _, err := s.DeleteDocument(first.ID, step.DocumentID); err == nil {
-		t.Fatal("subtask document deleted")
+	if err := s.DeleteDocument(first.ID, sub.DocumentID); err == nil {
+		t.Fatal("subphase document deleted")
 	}
 	other, err := NewStore(root)
 	if err != nil {
@@ -169,8 +169,8 @@ func TestNumbersAndSubtasksPersist(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !restored.Subtasks[0].Done || restored.Revision != completed.Revision {
-		t.Fatal("subtask did not persist")
+	if !restored.Subphases[0].Done || restored.Revision != completed.Revision {
+		t.Fatal("subphase did not persist")
 	}
 }
 
@@ -220,5 +220,63 @@ func TestConcurrentStoresAllocateUniqueNumbers(t *testing.T) {
 	}
 	if len(seen) != 12 {
 		t.Fatalf("created %d tasks", len(seen))
+	}
+}
+
+func TestPhaseLinks(t *testing.T) {
+	root := t.TempDir()
+	s, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	task, err := s.CreateTask("Linked")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []string{"", "javascript:alert(1)", "data:text/html,x", "file:///etc/passwd", "https://"} {
+		if _, err := s.CreatePhaseLink(task.ID, "goal", bad, "", task.Revision); !errors.Is(err, ErrInvalidName) {
+			t.Fatalf("accepted %q: %v", bad, err)
+		}
+	}
+	if _, err := s.CreatePhaseLink(task.ID, "nope", "https://example.com", "", task.Revision); !errors.Is(err, ErrInvalidName) {
+		t.Fatal("accepted unknown phase")
+	}
+	task, err = s.CreatePhaseLink(task.ID, "goal", "https://example.com/spec", "Spec", task.Revision)
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err = s.CreatePhaseLink(task.ID, "goal", "https://example.com/pr", "", task.Revision)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(task.Links) != 2 || task.Links[0].Title != "Spec" || task.Links[1].Number == task.Links[0].Number {
+		t.Fatalf("bad links: %+v", task.Links)
+	}
+	if _, err := s.CreatePhaseLink(task.ID, "goal", "https://example.com/stale", "", "outdated"); !errors.Is(err, ErrConflict) {
+		t.Fatal("stale link write accepted")
+	}
+	first := task.Links[0].Number
+	task, err = s.DeletePhaseLink(task.ID, first, task.Revision)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(task.Links) != 1 || task.Links[0].Number == first {
+		t.Fatalf("delete removed the wrong link: %+v", task.Links)
+	}
+	if _, err := s.DeletePhaseLink(task.ID, first, task.Revision); !errors.Is(err, ErrNotFound) {
+		t.Fatal("deleted a link twice")
+	}
+	other, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer other.Close()
+	reloaded, err := other.GetTask(task.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(reloaded.Links) != 1 || reloaded.Links[0].URL != "https://example.com/pr" || reloaded.Revision != task.Revision {
+		t.Fatalf("links did not persist: %+v", reloaded.Links)
 	}
 }

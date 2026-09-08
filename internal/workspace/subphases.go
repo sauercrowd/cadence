@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func (s *Store) CreateSubtask(taskID, phaseID, name, expected string) (Task, error) {
+func (s *Store) CreateSubphase(taskID, phaseID, name, expected string) (Task, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	t, err := s.readTask(taskID)
@@ -43,12 +43,12 @@ func (s *Store) CreateSubtask(taskID, phaseID, name, expected string) (Task, err
 		if err := tx.Create(&d).Error; err != nil {
 			return err
 		}
-		step := subtaskRecord{TaskID: t.ID, PhaseID: phaseID, DocumentID: doc.ID, Name: name}
-		if err := tx.Omit(clause.Associations).Create(&step).Error; err != nil {
+		sub := subphaseRecord{TaskID: t.ID, PhaseID: phaseID, DocumentID: doc.ID, Name: name}
+		if err := tx.Omit(clause.Associations).Create(&sub).Error; err != nil {
 			return err
 		}
 		t.Documents = append(t.Documents, doc)
-		t.Subtasks = append(t.Subtasks, Subtask{Number: step.Number, PhaseID: phaseID, DocumentID: doc.ID, Name: name})
+		t.Subphases = append(t.Subphases, Subphase{Number: sub.Number, PhaseID: phaseID, DocumentID: doc.ID, Name: name})
 		t.UpdatedAt = time.Now().UTC()
 		result := tx.Model(&taskRecord{}).Where("id = ? AND revision = ? AND deleted = ?", t.ID, expected, false).Updates(map[string]any{"revision": taskRevision(t), "updated_at": t.UpdatedAt})
 		if result.Error != nil {
@@ -64,7 +64,7 @@ func (s *Store) CreateSubtask(taskID, phaseID, name, expected string) (Task, err
 	}
 	return s.readTask(taskID)
 }
-func (s *Store) UpdateSubtask(taskID string, number int, done bool, expected string) (Task, error) {
+func (s *Store) UpdateSubphase(taskID string, number int, done bool, expected string) (Task, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	t, err := s.readTask(taskID)
@@ -75,9 +75,9 @@ func (s *Store) UpdateSubtask(taskID string, number int, done bool, expected str
 		return Task{}, ErrConflict
 	}
 	found := false
-	for i := range t.Subtasks {
-		if t.Subtasks[i].Number == number {
-			t.Subtasks[i].Done = done
+	for i := range t.Subphases {
+		if t.Subphases[i].Number == number {
+			t.Subphases[i].Done = done
 			found = true
 		}
 	}
@@ -93,7 +93,7 @@ func (s *Store) UpdateSubtask(taskID string, number int, done bool, expected str
 		if result.RowsAffected != 1 {
 			return ErrConflict
 		}
-		return tx.Model(&subtaskRecord{}).Where("task_id = ? AND number = ?", t.ID, number).Update("done", done).Error
+		return tx.Model(&subphaseRecord{}).Where("task_id = ? AND number = ?", t.ID, number).Update("done", done).Error
 	})
 	if err != nil {
 		return Task{}, err

@@ -1,5 +1,5 @@
 import { TaskHeading } from "../tasks/TaskHeading";
-import { Fragment, useEffect, useState, useSyncExternalStore, useRef } from "react";
+import { useEffect, useState, useSyncExternalStore, useRef } from "react";
 import {
   ArrowUpRight,
   Check,
@@ -21,6 +21,7 @@ import { statusLabels, StatusIcon } from "../tasks/TaskOverview";
 import { Modal } from "../../ui/Modal";
 import { navigate } from "../../app/router";
 import { KeyHint, useShortcut, useShortcutKey } from "../../app/keys";
+import { PhaseLinkList, PhaseLinkPicker } from "./PhaseLinks";
 
 export function TaskWorkspace({
   task,
@@ -41,10 +42,13 @@ export function TaskWorkspace({
     state = useSyncExternalStore(session.subscribe, session.snapshot);
   const phase = task.phases.find((p) => p.documentId === documentId),
     doc = task.documents.find((d) => d.id === documentId);
-  const [dialog, setDialog] = useState<"document" | "subtask" | "conflict" | null>(null),
+  const [dialog, setDialog] = useState<
+      "document" | "subphase" | "link" | "links" | "conflict" | null
+    >(null),
     [parentPhase, setParentPhase] = useState(""),
     [busy, setBusy] = useState(false),
     [name, setName] = useState(""),
+    [url, setUrl] = useState(""),
     [resolution, setResolution] = useState("");
   const scroll = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -90,11 +94,23 @@ export function TaskWorkspace({
 
   // Phases carry visible numbers, so their numbers select them. [ and ] step
   // through everything in the navigator, phases and supporting documents alike.
+  const subphasesOf = (phaseId: string) =>
+    task.subphases.filter((s) => s.phaseId === phaseId);
+  // A subphase document belongs to its phase in the navigator; only documents
+  // owned by neither are listed as supporting documents.
+  const owned = new Set([
+    ...task.phases.map((p) => p.documentId),
+    ...task.phases.flatMap((p) =>
+      subphasesOf(p.definition.id).map((s) => s.documentId),
+    ),
+  ]);
+  const supporting = task.documents.filter((d) => !owned.has(d.id));
   const order = [
-    ...task.phases.flatMap((p) => [p.documentId, ...task.subtasks.filter((s) => s.phaseId === p.definition.id).map((s) => s.documentId)]),
-    ...task.documents
-      .filter((d) => !task.phases.some((p) => p.documentId === d.id) && !task.subtasks.some((s) => s.documentId === d.id && task.phases.some((p) => p.definition.id === s.phaseId)))
-      .map((d) => d.id),
+    ...task.phases.flatMap((p) => [
+      p.documentId,
+      ...subphasesOf(p.definition.id).map((s) => s.documentId),
+    ]),
+    ...supporting.map((d) => d.id),
   ];
   const step = (delta: number) => {
     const at = order.indexOf(documentId);
@@ -105,6 +121,13 @@ export function TaskWorkspace({
     const phase = task.phases.find((p) => p.definition.number === Number(key));
     if (phase) changeDocument(phase.documentId);
   });
+  // Links belong to a phase, and a subphase document counts as being on it.
+  const activePhaseId =
+    phase?.definition.id ??
+    task.subphases.find((s) => s.documentId === documentId)?.phaseId ??
+    "";
+  const links = task.links.filter((l) => l.phaseId === activePhaseId);
+  useShortcut("phase-links", () => setDialog("links"), links.length > 0);
   useShortcut("doc-next", () => step(1));
   useShortcut("doc-prev", () => step(-1));
   useShortcut("back", onBack);
@@ -146,63 +169,120 @@ export function TaskWorkspace({
             {task.phases.map((p, i) => {
               const isCurrent = i === currentPhaseIndex;
               return (
-                <Fragment key={p.definition.id}><div
-                  className={`phase-nav-item ${p.documentId === documentId ? "selected" : ""} ${i < currentPhaseIndex ? "is-done" : ""} ${isCurrent ? "is-current" : ""}`}
+                <div
+                  key={p.definition.id}
+                  className={`phase-group ${i < currentPhaseIndex ? "is-done" : ""} ${isCurrent ? "is-current" : ""}`}
                 >
-                  <button
-                    className="phase-step"
-                    disabled={busy || isCurrent}
-                    title={isCurrent ? "Current phase" : "Make current phase"}
-                    aria-label={
-                      isCurrent
-                        ? `${p.definition.name}: current phase`
-                        : `Make ${p.definition.name} the current phase`
-                    }
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      update({ currentPhaseId: p.definition.id });
-                    }}
+                  <div
+                    className={`phase-nav-item ${p.documentId === documentId ? "selected" : ""}`}
                   >
-                    <span className="phase-step-number">
-                      {p.definition.number}
-                    </span>
-                    <span className="phase-step-hover">
-                      <Clock size={10} />
-                    </span>
-                  </button>
-                  <button
-                    className="phase-nav-label"
-                    aria-current={isCurrent ? "step" : undefined}
-                    title={p.definition.name}
-                    disabled={busy}
-                    onClick={() => changeDocument(p.documentId)}
-                  >
-                    <span>{p.definition.name}</span>
-                    {p.definition.mode === "async" && (
-                      <Bot size={13} aria-label="Async phase" />
-                    )}
-                  </button>
-                  <button className="icon-button" aria-label={`Add subtask to ${p.definition.name}`} disabled={busy}
-                    onClick={() => { setParentPhase(p.definition.id); setName(""); setDialog("subtask"); }}>
-                    <Plus size={12} />
-                  </button>
-                </div>
-                {task.subtasks.filter((s) => s.phaseId === p.definition.id).map((s) => (
-                  <div key={s.number} className={`subtask-nav ${s.documentId === documentId ? "selected" : ""}`}>
-                    <input type="checkbox" checked={s.done} aria-label={`Complete ${s.name}`} disabled={busy}
-                      onChange={(event) => {
-                        const done = event.target.checked;
-                        void run(async () => { await session.flush(); onTask(await api.updateSubtask(await api.task(task.id), s.number, done)); });
-                      }} />
-                    <button className="phase-nav-label" onClick={() => changeDocument(s.documentId)} title={s.name}>
-                      <span className="task-code">S{s.number}</span><span>{s.name}</span>
+                    <button
+                      className="phase-step"
+                      disabled={busy || isCurrent}
+                      title={isCurrent ? "Current phase" : "Make current phase"}
+                      aria-label={
+                        isCurrent
+                          ? `${p.definition.name}: current phase`
+                          : `Make ${p.definition.name} the current phase`
+                      }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        update({ currentPhaseId: p.definition.id });
+                      }}
+                    >
+                      <span className="phase-step-number">
+                        {p.definition.number}
+                      </span>
+                      <span className="phase-step-hover">
+                        <Clock size={10} />
+                      </span>
+                    </button>
+                    <button
+                      className="phase-nav-label"
+                      aria-current={isCurrent ? "step" : undefined}
+                      title={p.definition.name}
+                      disabled={busy}
+                      onClick={() => changeDocument(p.documentId)}
+                    >
+                      <span>{p.definition.name}</span>
+                      {p.definition.mode === "async" && (
+                        <Bot size={13} aria-label="Async phase" />
+                      )}
+                    </button>
+                    <button
+                      className="icon-button"
+                      aria-label={`Add subphase to ${p.definition.name}`}
+                      disabled={busy}
+                      onClick={() => {
+                        setParentPhase(p.definition.id);
+                        setName("");
+                        setDialog("subphase");
+                      }}
+                    >
+                      <Plus size={12} />
                     </button>
                   </div>
-                ))}
-                </Fragment>
+                  {subphasesOf(p.definition.id).map((s) => (
+                    <div
+                      key={s.number}
+                      className={`subphase-nav ${s.documentId === documentId ? "selected" : ""}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={s.done}
+                        aria-label={`Complete ${s.name}`}
+                        disabled={busy}
+                        onChange={(event) => {
+                          const done = event.target.checked;
+                          void run(async () => {
+                            await session.flush();
+                            onTask(
+                              await api.updateSubphase(
+                                await api.task(task.id),
+                                s.number,
+                                done,
+                              ),
+                            );
+                          });
+                        }}
+                      />
+                      <button
+                        className={`phase-nav-label ${s.done ? "is-complete" : ""}`}
+                        onClick={() => changeDocument(s.documentId)}
+                        title={s.name}
+                      >
+                        <span className="task-code">S{s.number}</span>
+                        <span>{s.name}</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
               );
             })}
           </div>
+          {activePhaseId && (
+            <PhaseLinkList
+              links={links}
+              busy={busy}
+              onAdd={() => {
+                setParentPhase(activePhaseId);
+                setUrl("");
+                setName("");
+                setDialog("link");
+              }}
+              onDelete={(link) =>
+                void run(async () => {
+                  await session.flush();
+                  onTask(
+                    await api.deletePhaseLink(
+                      await api.task(task.id),
+                      link.number,
+                    ),
+                  );
+                })
+              }
+            />
+          )}
           <div className="section-label documents-label">
             DOCUMENTS
             <button
@@ -216,18 +296,16 @@ export function TaskWorkspace({
               <Plus size={13} />
             </button>
           </div>
-          {task.documents
-            .filter((d) => !task.phases.some((p) => p.documentId === d.id) && !task.subtasks.some((s) => s.documentId === d.id && task.phases.some((p) => p.definition.id === s.phaseId)))
-            .map((d) => (
-              <button
-                key={d.id}
-                className={`document-nav-item ${d.id === documentId ? "selected" : ""}`}
-                onClick={() => changeDocument(d.id)}
-              >
-                <FileText size={14} />
-                {d.name}
-              </button>
-            ))}
+          {supporting.map((d) => (
+            <button
+              key={d.id}
+              className={`document-nav-item ${d.id === documentId ? "selected" : ""}`}
+              onClick={() => changeDocument(d.id)}
+            >
+              <FileText size={14} />
+              {d.name}
+            </button>
+          ))}
           <button
             className="document-nav-item muted"
             onClick={() => {
@@ -242,7 +320,9 @@ export function TaskWorkspace({
         <section className="phase-workspace">
           <header className="phase-header">
             <div>
-              {phase && <span className="task-code">#{phase.definition.number}</span>}
+              {phase && (
+                <span className="task-code">#{phase.definition.number}</span>
+              )}
               <h2>{phase?.definition.name || doc.name}</h2>
               {phase?.definition.mode === "async" && (
                 <Bot size={14} aria-label="Async phase" />
@@ -350,21 +430,99 @@ export function TaskWorkspace({
           </div>
         </section>
       </div>
-      {dialog === "subtask" && (
-        <Modal title="Add subtask" onClose={() => setDialog(null)}>
-          <form onSubmit={(event) => {
-            event.preventDefault();
-            void run(async () => {
-              await session.flush();
-              const updated = await api.createSubtask(await api.task(task.id), parentPhase, name.trim());
-              onTask(updated);
-              changeDocument(updated.subtasks[updated.subtasks.length - 1].documentId);
-            });
-          }}>
-            <div className="modal-content"><label>Subtask name
-              <input autoFocus required maxLength={120} value={name} onChange={(event) => setName(event.target.value)} />
-            </label></div>
-            <footer><button className="button primary" disabled={busy || !name.trim()}>Create subtask</button></footer>
+      {dialog === "links" && (
+        <PhaseLinkPicker links={links} onClose={() => setDialog(null)} />
+      )}
+      {dialog === "subphase" && (
+        <Modal title="Add subphase" onClose={() => setDialog(null)}>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void run(async () => {
+                await session.flush();
+                const updated = await api.createSubphase(
+                  await api.task(task.id),
+                  parentPhase,
+                  name.trim(),
+                );
+                onTask(updated);
+                changeDocument(
+                  updated.subphases[updated.subphases.length - 1].documentId,
+                );
+              });
+            }}
+          >
+            <div className="modal-content">
+              <label>
+                Subphase name
+                <input
+                  data-autofocus
+                  required
+                  maxLength={120}
+                  placeholder="Storage layer"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </label>
+            </div>
+            <footer>
+              <button
+                className="button primary"
+                disabled={busy || !name.trim()}
+              >
+                Create subphase
+              </button>
+            </footer>
+          </form>
+        </Modal>
+      )}
+      {dialog === "link" && (
+        <Modal title="Add link" onClose={() => setDialog(null)}>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void run(async () => {
+                await session.flush();
+                onTask(
+                  await api.createPhaseLink(
+                    await api.task(task.id),
+                    parentPhase,
+                    url.trim(),
+                    name.trim(),
+                  ),
+                );
+                setDialog(null);
+              });
+            }}
+          >
+            <div className="modal-content">
+              <label>
+                URL
+                <input
+                  data-autofocus
+                  type="url"
+                  required
+                  maxLength={2048}
+                  placeholder="https://github.com/org/repo/pull/1"
+                  value={url}
+                  onChange={(event) => setUrl(event.target.value)}
+                />
+              </label>
+              <label className="stacked-field">
+                Label (optional)
+                <input
+                  maxLength={120}
+                  placeholder="Pull request"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </label>
+            </div>
+            <footer>
+              <button className="button primary" disabled={busy || !url.trim()}>
+                Add link
+              </button>
+            </footer>
           </form>
         </Modal>
       )}

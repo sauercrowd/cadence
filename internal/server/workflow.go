@@ -66,15 +66,29 @@ func (h *Handler) GetWorkspace(context.Context, *connect.Request[emptypb.Empty])
 	info := h.store.Info()
 	return connect.NewResponse(&v1.WorkspaceInfo{Id: info.ID, Name: info.Name, LogoPath: info.LogoPath}), nil
 }
-func (h *Handler) CreateSubtask(_ context.Context, r *connect.Request[v1.CreateSubtaskRequest]) (*connect.Response[v1.Task], error) {
-	t, err := h.store.CreateSubtask(r.Msg.TaskId, r.Msg.PhaseId, r.Msg.Name, r.Msg.Revision)
+func (h *Handler) CreateSubphase(_ context.Context, r *connect.Request[v1.CreateSubphaseRequest]) (*connect.Response[v1.Task], error) {
+	t, err := h.store.CreateSubphase(r.Msg.TaskId, r.Msg.PhaseId, r.Msg.Name, r.Msg.Revision)
 	if err != nil {
 		return nil, rpcError(err)
 	}
 	return connect.NewResponse(taskToProto(t)), nil
 }
-func (h *Handler) UpdateSubtask(_ context.Context, r *connect.Request[v1.UpdateSubtaskRequest]) (*connect.Response[v1.Task], error) {
-	t, err := h.store.UpdateSubtask(r.Msg.TaskId, int(r.Msg.Number), r.Msg.Done, r.Msg.Revision)
+func (h *Handler) UpdateSubphase(_ context.Context, r *connect.Request[v1.UpdateSubphaseRequest]) (*connect.Response[v1.Task], error) {
+	t, err := h.store.UpdateSubphase(r.Msg.TaskId, int(r.Msg.Number), r.Msg.Done, r.Msg.Revision)
+	if err != nil {
+		return nil, rpcError(err)
+	}
+	return connect.NewResponse(taskToProto(t)), nil
+}
+func (h *Handler) CreatePhaseLink(_ context.Context, r *connect.Request[v1.CreatePhaseLinkRequest]) (*connect.Response[v1.Task], error) {
+	t, err := h.store.CreatePhaseLink(r.Msg.TaskId, r.Msg.PhaseId, r.Msg.Url, r.Msg.Title, r.Msg.Revision)
+	if err != nil {
+		return nil, rpcError(err)
+	}
+	return connect.NewResponse(taskToProto(t)), nil
+}
+func (h *Handler) DeletePhaseLink(_ context.Context, r *connect.Request[v1.DeletePhaseLinkRequest]) (*connect.Response[v1.Task], error) {
+	t, err := h.store.DeletePhaseLink(r.Msg.TaskId, int(r.Msg.Number), r.Msg.Revision)
 	if err != nil {
 		return nil, rpcError(err)
 	}

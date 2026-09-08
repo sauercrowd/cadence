@@ -24,90 +24,183 @@ If you think the phases could be improved (both spec template and agent instruct
 
 # Working with a Cadence workspace
 
-A Cadence workspace is a `.cadence/` directory inside a project root. It is
-plain files — JSON plus Markdown — so an agent can operate on it with file
-tools. Prefer the HTTP API when the server is running; edit files directly
-only when it is not, and never do both at once.
+A workspace is a `.cadence/` directory in a project root, served by the Cadence
+server at **`http://127.0.0.1:7331`**. Everything — tasks, phases, subphases,
+documents, links, attachments — goes through that server. Treat `.cadence/`
+itself as opaque: do not read or write the database or the Markdown files
+directly, and do not try to keep them in sync by hand.
 
-## Layout
+If the server is not running, start it (`cadence [project-directory]`, or
+`go run .` in the Cadence repo) rather than falling back to files.
 
-```text
-<project>/
-├── .cadence/
-│   ├── workspace.json          { id (uuid), name, logoPath? }
-│   ├── workflow.json           { phases: [{ id, name, mode, documentTemplate }] }
-│   ├── trash/                  deleted tasks/documents (recovery only)
-│   └── tasks/<task-uuid>/
-│       ├── task.json           metadata, document index, phase links
-│       ├── <slug>.md           documents (phase docs + supporting docs)
-│       ├── assets/             attachments referenced by the documents
-│       └── history/            per-revision backups (recovery only)
-└── <project files the logo may point at>
+## The API
+
+It is a [Connect](https://connectrpc.com) service, so every method is available
+as plain JSON over HTTP `POST`:
+
+```
+POST http://127.0.0.1:7331/api/worker.v1.WorkspaceService/<Method>
+Content-Type: application/json
+
+<request message as JSON>
 ```
 
-`trash/` and `history/` are recovery mechanisms. Read them to restore
-content; never write them by hand. Deletions move files there instead of
-removing them.
+JSON uses lowerCamelCase field names (`task_id` → `taskId`). Enums are their
+full string names (`"TASK_STATUS_FOCUS"`). This is the whole schema:
 
-## workspace.json and workflow.json
+```proto
+service WorkspaceService {
+  rpc GetWorkspace(google.protobuf.Empty) returns (WorkspaceInfo);
+  rpc ListTasks(google.protobuf.Empty) returns (ListTasksResponse);
+  rpc GetTask(TaskRequest) returns (Task);
+  rpc CreateTask(CreateTaskRequest) returns (Task);
+  rpc RenameTask(RenameTaskRequest) returns (Task);
+  rpc UpdateTask(UpdateTaskRequest) returns (Task);
+  rpc DeleteTask(TaskRequest) returns (google.protobuf.Empty);
 
-`workspace.json`: `{ "id": "<uuid>", "name": "<dir name>", "logoPath"? }`.
-`logoPath` is a project-relative image path (`assets/logo.png`, resolved
-against the project root, never inside `.cadence/`). Omit it for no logo.
+  rpc CreateSubphase(CreateSubphaseRequest) returns (Task);
+  rpc UpdateSubphase(UpdateSubphaseRequest) returns (Task);
+  rpc CreatePhaseLink(CreatePhaseLinkRequest) returns (Task);
+  rpc DeletePhaseLink(DeletePhaseLinkRequest) returns (Task);
 
-`workflow.json`: `{ "phases": [...] }` with 1–24 phases. Each phase:
-`{ "id": "goal", "name": "Goal planning", "mode": "interactive" |
-"async", "documentTemplate": "# Goal\n..." }`. IDs match
-`^[a-zA-Z0-9_-]{1,80}$` and must be unique; names must be non-blank.
+  rpc CreateDocument(CreateDocumentRequest) returns (Document);
+  rpc GetDocument(DocumentRequest) returns (Document);
+  rpc UpdateDocument(UpdateDocumentRequest) returns (Document);
+  rpc RenameDocument(RenameDocumentRequest) returns (Document);
+  rpc DeleteDocument(DocumentRequest) returns (google.protobuf.Empty);
 
-## task.json
-
-```json
-{
-  "schemaVersion": 1,
-  "id": "<uuid>",
-  "name": "Do the thing",
-  "documents": [{ "id": "<uuid>", "name": "Goal planning", "filename": "goal.md" }],
-  "createdAt": "2026-09-06T16:00:00Z",
-  "updatedAt": "2026-09-06T16:00:00Z",
-  "status": "open",
-  "priority": 2,
-  "agentStatus": null,
-  "currentPhaseId": "goal",
-  "phases": [{ "phaseId": "goal", "documentId": "<uuid>" }]
+  rpc GetWorkflow(google.protobuf.Empty) returns (Workflow);
+  rpc UpdateWorkflow(UpdateWorkflowRequest) returns (Workflow);
 }
+
+message Task {
+  string id = 1;                            // uuid
+  string name = 2;
+  repeated DocumentSummary documents = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  TaskStatus status = 6;
+  int32 priority = 7;                       // 0-3, default 2
+  AgentStatus agent_status = 8;
+  string current_phase_id = 10;
+  repeated TaskPhase phases = 11;
+  string revision = 12;
+  int32 number = 13;                        // the "#4" the user sees
+  repeated Subphase subphases = 14;
+  repeated PhaseLink links = 15;
+}
+message DocumentSummary { string id = 1; string name = 2; string filename = 3; }
+message Document {
+  string id = 1; string task_id = 2; string name = 3;
+  string filename = 4; string content = 5; string revision = 6;
+}
+message PhaseDefinition {
+  string id = 1; string name = 2; string mode = 4;   // "interactive" | "async"
+  string document_template = 6; int32 number = 9;
+}
+message TaskPhase { PhaseDefinition definition = 1; string document_id = 2; }
+message Workflow { repeated PhaseDefinition phases = 1; string revision = 2; }
+message WorkspaceInfo { string id = 1; string name = 2; string logo_path = 3; }
+
+// A subphase is a checkable unit of work under one phase, with a document of
+// its own. `number` is workspace-wide and stable (shown as "S7").
+message Subphase {
+  int32 number = 1; string phase_id = 2; string document_id = 3;
+  string name = 4; bool done = 5;
+}
+// A per-phase bookmark (PR, dashboard, spec). http/https only.
+message PhaseLink {
+  int32 number = 1; string phase_id = 2; string url = 3; string title = 4;
+}
+
+enum TaskStatus {
+  TASK_STATUS_UNSPECIFIED = 0; TASK_STATUS_OPEN = 1;
+  TASK_STATUS_FOCUS = 2; TASK_STATUS_DONE = 3; TASK_STATUS_ARCHIVED = 4;
+}
+enum AgentStatus { AGENT_STATUS_NONE = 0; AGENT_STATUS_WORKING = 1; }
+
+message ListTasksResponse { repeated Task tasks = 1; repeated string errors = 2; }
+message TaskRequest { string task_id = 1; }
+message CreateTaskRequest { string name = 1; }
+message RenameTaskRequest { string task_id = 1; string name = 2; }
+message UpdateTaskRequest {
+  string id = 1; string revision = 2; string name = 3;
+  TaskStatus status = 4; int32 priority = 5; AgentStatus agent_status = 6;
+  google.protobuf.FieldMask update_mask = 8;   // which fields to apply
+  string current_phase_id = 9;
+}
+message CreateSubphaseRequest {
+  string task_id = 1; string phase_id = 2; string name = 3; string revision = 4;
+}
+message UpdateSubphaseRequest {
+  string task_id = 1; int32 number = 2; bool done = 3; string revision = 4;
+}
+message CreatePhaseLinkRequest {
+  string task_id = 1; string phase_id = 2; string url = 3;
+  string title = 4; string revision = 5;
+}
+message DeletePhaseLinkRequest {
+  string task_id = 1; int32 number = 2; string revision = 3;
+}
+message CreateDocumentRequest { string task_id = 1; string name = 2; }
+message DocumentRequest { string task_id = 1; string document_id = 2; }
+message RenameDocumentRequest {
+  string task_id = 1; string document_id = 2; string name = 3;
+}
+message UpdateDocumentRequest {
+  string task_id = 1; string document_id = 2;
+  string content = 3; string revision = 4;
+}
+message UpdateWorkflowRequest { Workflow workflow = 1; string revision = 2; }
 ```
 
-Rules the server enforces — a file edit that breaks them makes the task
-unreadable until repaired:
+### One example: write a phase document
 
-- `status` is one of `open`, `focus`, `done`, `archived`; `priority` is
-  `0`–`3` (default `2`); `agentStatus` is `"working"` or `null`.
-- Every document entry needs a uuid `id`, and `filename` must be a bare
-  `*.md` name (no directories, no separators). Filenames are unique per
-  task, case-insensitively; derive them by slugifying the title
-  (lowercase, runs of non-alphanumerics become one `-`) and appending
-  `-2`, `-3`, … on collision.
-- Every `phases[].documentId` must exist in `documents`. Phase
-  *definitions* (name, mode, template) are resolved live from
-  `workflow.json` on every read — only `phaseId` + `documentId` persist.
-- Removing a phase ID from `workflow.json` drops it from tasks but keeps
-  its document as a supporting document. Phase documents cannot be
-  deleted while a phase references them.
-- New phases in `workflow.json` materialize a fresh document from
-  `documentTemplate` in every task on next read, so adding a phase has
-  immediate, workspace-wide effects. Prefer API reads after such a change
-  to see what was created.
+`GetDocument`, edit the content, `UpdateDocument` with the revision you read.
 
-## Documents
+```bash
+BASE=http://127.0.0.1:7331/api/worker.v1.WorkspaceService
 
-A document file is Markdown body first, machine sections after:
+curl -s $BASE/GetDocument -H 'Content-Type: application/json' \
+  -d '{"taskId":"<task-uuid>","documentId":"<doc-uuid>"}'
+# → {"id":"…","name":"Goal planning","content":"# Goal\n\n…","revision":"9f2c…"}
+
+curl -s $BASE/UpdateDocument -H 'Content-Type: application/json' \
+  -d '{"taskId":"<task-uuid>","documentId":"<doc-uuid>",
+       "content":"# Goal\n\n## Outcome\n\nShip the importer.\n",
+       "revision":"9f2c…"}'
+```
+
+Every other call follows the same shape. `UpdateTask` is the one with a wrinkle:
+it is masked, and in JSON a `FieldMask` is a **comma-separated string of
+camelCase field names**, not an object. To advance a phase:
+
+```bash
+curl -s $BASE/UpdateTask -H 'Content-Type: application/json' \
+  -d '{"id":"<task-uuid>","revision":"<task revision>",
+       "currentPhaseId":"implement","updateMask":"currentPhaseId"}'
+```
+
+Maskable fields are `name`, `status`, `priority`, `agentStatus` and
+`currentPhaseId`; the phase id must be one the task already has.
+
+## Revisions
+
+Every read returns a `revision`, and every write must echo the one it was based
+on. A mismatch is rejected as a conflict (Connect code `aborted`) — re-read,
+re-apply your change to the fresh content, and retry. Never invent or reuse a
+revision. Task-level writes (including subphase and link changes) use the task
+revision; document writes use the document revision.
+
+## Document content
+
+`UpdateDocument` replaces the *entire* file, so preserve the parts you are not
+editing. A document is Markdown body first, machine sections after:
 
 ````md
 # Title
 
-Body text. Images and videos referenced by relative path:
-![alt](assets/3f9a….png) and <video src="assets/7c1d….mp4" controls></video>
+Body text. Attachments by relative path: ![alt](assets/3f9a….png)
 
 <agent-instructions>
 Prompt text for the agent working this phase.
@@ -117,93 +210,41 @@ Prompt text for the agent working this phase.
 ```
 ````
 
-- `<agent-instructions>` must be unindented, unfenced, tags on their own
-  lines. It may sit anywhere; inner text is the prompt verbatim.
-- `cadence-comments` must be the trailing block, an unindented fenced code block containing JSON. Each thread:
-  `{ "id", "status": "open" | "resolved", "anchor": { "version": 1,
-  "start", "end", "quote", "prefix", "suffix" }, "messages": [{ "id",
-  "author", "body", "createdAt" }], "createdAt", "updatedAt" }`.
-  Thread IDs must be unique; `version` must be `2`.
-- Anchors are offsets into the document's *text* (Markdown stripped), and
-  the app re-resolves them by `quote` plus surrounding context. Editing
-  around a thread is safe; rewriting its quoted passage detaches it.
-  Never hand-edit the envelope unless you can keep the JSON valid —
-  corruption forces the document into a manual repair mode.
-- The rich editor round-trips headings, emphasis, links, lists,
-  checklists, tables, code fences, rules, images, videos, and `cadence-html` fenced blocks rendered as sandboxed
-  HTML embeds. Ordinary `html` fences display code. Raw `<iframe>` tags
-  stay in source mode. Anything else (other raw HTML, footnotes, reference
-  links) is source-only: still editable, but only as raw text.
+- `<agent-instructions>` — unindented, unfenced, tags on their own lines. The
+  text inside is your prompt for this phase.
+- `cadence-comments` — the trailing fenced block, valid JSON, `version` 2.
+  Threads are `{ "id", "status": "open"|"resolved", "anchor": { "version": 1,
+  "start", "end", "quote", "prefix", "suffix" }, "messages": [{ "id", "author",
+  "body", "createdAt" }], "createdAt", "updatedAt" }` with unique ids. Anchors
+  are offsets into the Markdown-stripped text and are re-resolved by `quote`
+  plus context, so editing around a thread is safe but rewriting its quoted
+  passage detaches it. To resolve a thread, flip `status` and keep `updatedAt`
+  fresh. Corrupt JSON here forces the document into manual repair mode.
+- The rich editor round-trips headings, emphasis, links, lists, checklists,
+  tables, code fences, rules, images, videos, and `cadence-html` fences
+  (rendered as sandboxed HTML embeds — good for showing UI). Other raw HTML,
+  footnotes and reference links stay source-only: still editable, just as text.
 
 ## Attachments
 
-Files live in `tasks/<id>/assets/<uuid>.<ext>` and are referenced from
-Markdown as `assets/<uuid>.<ext>`. Images (`png jpg gif webp svg`) and videos
-(`mp4 webm ogv`) preview inline; everything else serves as a download.
-Never reference absolute paths — documents must stay portable.
+Outside the RPC service, on the same server:
 
-## Revisions and conflicts (API use)
+- `POST /api/tasks/{taskId}/attachments` — raw bytes as the body,
+  `Content-Type` set, original name in a url-encoded `X-Filename` header.
+  Returns `{"name": "<stored>"}`. 10 MB limit.
+- `GET /api/tasks/{taskId}/attachments/{name}` — serves it back.
 
-Every read returns a `revision`: the sha256 hex of the raw file bytes
-(`task.json`, `workflow.json`, or the document). Every write must send
-back the revision it was based on; a mismatch is rejected as a conflict.
-On conflict, re-read, re-apply the change onto the fresh content, and
-retry. Overwrites keep a per-revision backup under `history/`
-automatically — no manual backup step needed.
+Reference the returned name from the document: `![alt](name)` for images,
+`<video src="name" controls></video>` for video, `[label](name)` otherwise.
+Always relative, never absolute — documents must stay portable.
 
-The API is Connect JSON: `POST
-/api/worker.v1.WorkspaceService/<Method>` with a JSON body, served under
-`/api` by the Cadence server (default `http://127.0.0.1:7331`):
+## Phases come from the workflow
 
-- `ListTasks {}` → tasks plus non-fatal per-task errors.
-- `CreateTask {name}` / `RenameTask {taskId, name}` / `DeleteTask
-  {taskId}` (moves the task directory to `trash/`).
-- `GetTask {taskId}` → task with live phase definitions, document
-  index, and revision.
-- `UpdateTask {id, revision, name?, status?, priority?, agentStatus?,
-  currentPhaseId?, updateMask: {paths: [...]}}` — `status` is
-  `TASK_STATUS_OPEN|FOCUS|DONE|ARCHIVED`, `agentStatus`
-  `AGENT_STATUS_WORKING|NONE`. Mask paths use the proto names:
-  `name`, `status`, `priority`, `agent_status`, `current_phase_id`.
-  Advancing a phase is `currentPhaseId` + mask `["current_phase_id"]`
-  (the ID must be one of the task's phases).
-- `CreateDocument {taskId, name}` / `GetDocument {taskId, documentId}`
-  → `{id, taskId, name, filename, content, revision}`.
-- `UpdateDocument {taskId, documentId, content, revision}` — `content`
-  is the *entire* file, envelope included.
-- `RenameDocument {taskId, documentId, name}` (renames the file too) /
-  `DeleteDocument {taskId, documentId}` (moves the file to `trash/`).
-- `GetWorkflow {}` / `UpdateWorkflow {workflow, revision}`.
-- `GetWorkspace {}` → `{id, name, logoPath}`.
-- Attachments live outside RPC: `POST
-  /api/tasks/{taskId}/attachments` with the raw bytes as body,
-  `Content-Type` set, and the original name in an url-encoded
-  `X-Filename` header → `{"name": "<stored>"}`. `GET
-  /api/tasks/{taskId}/attachments/{name}` serves it. 10 MB limit.
-  `GET /api/workspace/logo` serves the configured logo.
+Phase definitions live in the workflow, not on the task: a task stores only
+`phaseId` + `documentId`, and names, modes and templates resolve live on every
+read. So adding a phase via `UpdateWorkflow` materializes a document from its
+template in *every* task, and removing one keeps its document as a supporting
+document. After changing the workflow, re-read tasks to see what was created.
 
-## Recipes
-
-- **New task with content**: `CreateTask`, then `UpdateDocument` on each
-  phase document (empty template bodies welcome real content).
-- **Edit a document**: `GetDocument`, modify `content` preserving the
-  envelope blocks, `UpdateDocument` with the returned revision.
-- **Advance the phase**: `UpdateTask` with `currentPhaseId` set to the
-  next workflow phase ID.
-- **Resolve a thread**: flip its `status` to `"resolved"` (keep
-  `updatedAt` fresh) and `UpdateDocument` the whole file.
-- **Add a file to a document**: upload first, then reference the
-  returned name — `![alt](name)` for images, `<video src="name"
-  controls></video>` for video, `[label](name)` otherwise.
-
-## Do not
-
-- Do not edit files while the server is running against the same
-  workspace — its revision protocol and locks assume API writes, and a
-  write landing between its check and save loses.
-- Do not invent non-uuid IDs, reuse IDs across objects, or reference
-  document IDs that are not in the task's `documents` index.
-- Do not move or rename the `.cadence` directory contents by hand to
-  "reorganize" — the index is the source of truth, not the filenames.
-- Do not commit `.cadence/` to version control; it is local working
-  state (the project template ignores it).
+Do not invent non-uuid ids, reuse ids across objects, or reference document ids
+that are not in the task's `documents` list.

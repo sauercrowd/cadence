@@ -36,7 +36,8 @@ type DocumentSummary struct {
 }
 
 type Task struct {
-	Subtasks       []Subtask         `json:"subtasks,omitempty"`
+	Subphases      []Subphase        `json:"subphases,omitempty"`
+	Links          []PhaseLink       `json:"links,omitempty"`
 	SchemaVersion  int               `json:"schemaVersion"`
 	ID             string            `json:"id"`
 	Number         int               `json:"number"`
@@ -336,9 +337,9 @@ func (s *Store) DeleteDocument(taskID, documentID string) error {
 			return fmt.Errorf("%w: phase documents cannot be deleted", ErrInvalidName)
 		}
 	}
-	for _, step := range task.Subtasks {
-		if step.DocumentID == documentID {
-			return fmt.Errorf("%w: subtask documents cannot be deleted", ErrInvalidName)
+	for _, sub := range task.Subphases {
+		if sub.DocumentID == documentID {
+			return fmt.Errorf("%w: subphase documents cannot be deleted", ErrInvalidName)
 		}
 	}
 	source := filepath.Join(s.taskDir(taskID), summary.Filename)
