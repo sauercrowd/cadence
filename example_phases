@@ -1,8 +1,6 @@
 Goal planning
 -------------
 
-# Goal
-
 ## Outcome
 
 What should this work achieve?
@@ -23,14 +21,13 @@ What should this work achieve?
 
 Implementation planning
 -----------------------
-# Implementation plan
 
 ## Changes
 
 ## Steps
 
 ## Verification
-
+ 
 
 <agent-instructions>
 - Identify components, data models, dependencies, and verification.
@@ -40,12 +37,12 @@ Implementation planning
 - Iterate with me before implementation.
 - call out tradeoffs where necessary
 - consider performance and security tradeoffs in our design
+- the goal is that the user at the end basically can already envision what the code later will look like, it's "just" a matter of implementing it.
 </agent-instructions>
+
 
 Implementation
 --------------
-# Implementation
-
 ## Changes
 
 ## Verification evidence
@@ -73,8 +70,6 @@ Implementation
 
 Finalize work
 -------------
-# Finalize work
-
 ## Review and decisions
 
 ## Reflection

@@ -13,13 +13,14 @@ An interactive task means the user is fully focused on it, an async tasks mean t
 when the user comes back as much as possible is moved out of the way.
 
 A phase just consists of a title and a markdown doc. The markdown doc is the "spec" for that task, but it contains an <agent-instructions></agent-instructions> section that is default hidden (since it will change rarely). in the agent instructions - if exists - are any extra instructions to you when working on that task. The spec itself will define what you're agreeing on with the user.
-E.g. the phases of a project might be: goal planning, implementation planning, implementation, review. In that case the idea is that you first super interatively decomp the goal, then in the next step agree on modelling, locations in the codebase, ..., and finally implementation where you should work by yourself as much as possible, e.g. explictly validating coding standards, ...
+The spec supports adding comments (both by you and the user), which will just get dumped in a special comments section in the markdown so it's simple (that section will be hidden from the user, and the comments will be rendered out nicely and overlay appropriately).
 
+Example phases of a project might be: goal planning, implementation planning, implementation, review. In that case the idea is that you first super interatively decomp the goal, then in the next step agree on modelling, locations in the codebase, ..., and finally implementation where you should work by yourself as much as possible, e.g. explictly validating coding standards, ...
 
 The markdown supports both dropping in files/screenshots for the user (images/videos are rendered inline), but also a special cadence-html codeblock.
 Code in that codeblock will be rendered in an iframe, which is perfect if you want to show actual UI components for example or even just embed custom sketches, ...
 
-If you think the phases could be improved (both spec template and agent instructions), let the user know.
+If you think the phases could be improved (both spec template and agent instructions), or anything is unclear, let the user know.
 
 # Working with a Cadence workspace
 
