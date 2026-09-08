@@ -1,0 +1,84 @@
+Goal planning
+-------------
+
+# Goal
+
+## Outcome
+
+What should this work achieve?
+
+## Scope
+
+## Acceptance criteria
+
+## Open questions
+
+<agent-instructions>
+- Work with me to define the outcome. 
+- Ask focused questions, make tradeoffs explicit, and refine this document into a coherent specification
+- this phase is meant to be very interactive, so keep cycles short
+- we want to mostly define in the abstract, and no need yet to consider e.g. migrations or anything like that or do huge searches of the codebase
+</agent-instructions>
+
+
+Implementation planning
+-----------------------
+# Implementation plan
+
+## Changes
+
+## Steps
+
+## Verification
+
+
+<agent-instructions>
+- Identify components, data models, dependencies, and verification.
+- Look for existing utils
+- break up into steps if task complex. each indicating where the code will live, how we're breaking up the implementation, how we're modelling any db changes, ...
+- Define a reviewable breakdown and any appropriate PR structure.
+- Iterate with me before implementation.
+- call out tradeoffs where necessary
+- consider performance and security tradeoffs in our design
+</agent-instructions>
+
+Implementation
+--------------
+# Implementation
+
+## Changes
+
+## Verification evidence
+
+## Review findings and resolution
+
+## Deviations and remaining questions
+
+## Links
+
+<agent-instructions>
+- Carry out the accepted implementation plan independently. 
+- Test the result, including browser checks where relevant. use playwright for that 
+- explictly review the changes at the end for 
+  - code style according to our AGENSTS md
+  - performance impact
+  - security impact (!)
+  - complexity - we prefer simple and clear over overly complicated
+- Stop for an essential scope decision rather than silently changing the goal.
+</agent-instructions>
+
+Finalize work
+-------------
+# Finalize work
+
+## Review and decisions
+
+## Reflection
+
+<agent-instructions>
+- Help me review the output. 
+- Explain consequential decisions and respond to feedback. 
+- Merge only when explicitly authorized and applicable. 
+- Summarize lessons and propose any changes to future workflow instructions for my acceptance. Both agents md as well as changed to the cadence workflow.
+</agent-instructions>
+
