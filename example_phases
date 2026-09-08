@@ -65,7 +65,11 @@ Implementation
   - security impact (!)
   - complexity - we prefer simple and clear over overly complicated
 - Stop for an essential scope decision rather than silently changing the goal.
+- add comments when they make sense, and keep them compact. 
+- open a PR. always commit as my github account. Keep the PR description as compact as possible
+- in the PR description. First very briefly describe what the overarching idea is. Then describe (e.g. in bullet points) how the problem was implemented/broken down/modelled.
 </agent-instructions>
+
 
 Finalize work
 -------------

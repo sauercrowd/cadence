@@ -1,0 +1,9 @@
+- in create task, the selection menu overflows inside the dialog, adding a scrollbar
+- the formatting bar on a task needs to float, it currently stays at the top of the task editor
+- the lines are messed up (try creating a subtask, and then marking a later phase as "done" - there's a few issues
+- rename subtask to subphase I think?
+- add the ability to add a list of URLs to a phase, that can be quickly navigated to when on the phase. so each url should get a number as well, and mabe we do something like when you press u you can select the url and it opens in a new tab
+- focusing on a task right now adds a black line at the top as well as an outline to the editor itself. bit much
+- add a keyboard shortcut to add a comment on a task
+- I've added an explanation how the tool should be used. Let's get rid of the file based interactions and only interact using the server. let's just inline the proto definition and say it's a connectRPC API and maybe just show one example. think that's easier than how we're describing it right now
+- 
