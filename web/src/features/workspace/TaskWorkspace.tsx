@@ -21,7 +21,7 @@ import { statusLabels, StatusIcon } from "../tasks/TaskOverview";
 import { Modal } from "../../ui/Modal";
 import { navigate } from "../../app/router";
 import { KeyHint, useShortcut, useShortcutKey } from "../../app/keys";
-import { PhaseLinkList, PhaseLinkPicker } from "./PhaseLinks";
+import { PhaseHeaderLinks, PhaseLinkPicker } from "./PhaseLinks";
 
 export function TaskWorkspace({
   task,
@@ -127,6 +127,17 @@ export function TaskWorkspace({
     task.subphases.find((s) => s.documentId === documentId)?.phaseId ??
     "";
   const links = task.links.filter((l) => l.phaseId === activePhaseId);
+  const addPhaseLink = () => {
+    setParentPhase(activePhaseId);
+    setUrl("");
+    setName("");
+    setDialog("link");
+  };
+  const deletePhaseLink = (link: (typeof links)[number]) =>
+    void run(async () => {
+      await session.flush();
+      onTask(await api.deletePhaseLink(await api.task(task.id), link.number));
+    });
   useShortcut("phase-links", () => setDialog("links"), links.length > 0);
   useShortcut("doc-next", () => step(1));
   useShortcut("doc-prev", () => step(-1));
@@ -260,29 +271,6 @@ export function TaskWorkspace({
               );
             })}
           </div>
-          {activePhaseId && (
-            <PhaseLinkList
-              links={links}
-              busy={busy}
-              onAdd={() => {
-                setParentPhase(activePhaseId);
-                setUrl("");
-                setName("");
-                setDialog("link");
-              }}
-              onDelete={(link) =>
-                void run(async () => {
-                  await session.flush();
-                  onTask(
-                    await api.deletePhaseLink(
-                      await api.task(task.id),
-                      link.number,
-                    ),
-                  );
-                })
-              }
-            />
-          )}
           <div className="section-label documents-label">
             DOCUMENTS
             <button
@@ -326,6 +314,14 @@ export function TaskWorkspace({
               <h2>{phase?.definition.name || doc.name}</h2>
               {phase?.definition.mode === "async" && (
                 <Bot size={14} aria-label="Async phase" />
+              )}
+              {activePhaseId && (
+                <PhaseHeaderLinks
+                  links={links}
+                  busy={busy}
+                  onAdd={addPhaseLink}
+                  onDelete={deletePhaseLink}
+                />
               )}
             </div>
             <div className="phase-actions">

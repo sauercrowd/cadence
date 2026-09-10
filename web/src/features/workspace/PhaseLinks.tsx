@@ -17,11 +17,8 @@ function hostLabel(url: string) {
 }
 export const linkLabel = (link: PhaseLink) => link.title || hostLabel(link.url);
 
-/**
- * The current phase's links, numbered so `u` can address them. Numbers are
- * positional within the phase, which is what keeps them short enough to type.
- */
-export function PhaseLinkList({
+/** The active phase's links live beside its title, not in the navigator. */
+export function PhaseHeaderLinks({
   links,
   busy,
   onAdd,
@@ -33,17 +30,11 @@ export function PhaseLinkList({
   onDelete: (link: PhaseLink) => void;
 }) {
   return (
-    <>
-      <div className="section-label documents-label">
-        LINKS
-        <button className="icon-button" aria-label="Add link" onClick={onAdd}>
-          <Plus size={13} />
-        </button>
-      </div>
+    <div className="phase-header-links" aria-label="Phase links">
       {links.map((link, index) => (
-        <div className="link-nav-item" key={link.number}>
+        <div className="phase-header-link" key={link.number}>
           <button
-            className="link-nav-open"
+            className="phase-header-link-open"
             title={link.url}
             onClick={() => openLink(link.url)}
           >
@@ -52,17 +43,25 @@ export function PhaseLinkList({
             <ExternalLink size={11} />
           </button>
           <button
-            className="icon-button"
+            className="phase-header-link-remove"
             aria-label={`Remove ${linkLabel(link)}`}
             disabled={busy}
             onClick={() => onDelete(link)}
           >
-            <X size={12} />
+            <X size={11} />
           </button>
         </div>
       ))}
-      {!links.length && <p className="link-empty">No links on this phase.</p>}
-    </>
+      <button
+        className="phase-header-link-add"
+        aria-label="Add link to phase"
+        title="Add link"
+        disabled={busy}
+        onClick={onAdd}
+      >
+        <Plus size={12} />
+      </button>
+    </div>
   );
 }
 

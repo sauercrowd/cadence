@@ -56,6 +56,12 @@ export const SHORTCUTS: Shortcut[] = [
     label: "List or board",
     scope: "Task list",
   },
+  {
+    id: "cycle-segment",
+    keys: ["s"],
+    label: "Segment by status, priority, or phase",
+    scope: "Task list",
+  },
 
   {
     id: "back",

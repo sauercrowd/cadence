@@ -14,3 +14,18 @@ export const statusField: PropertyField = {
     label,
   })),
 };
+
+const recencyOptions = [
+  { id: "week", label: "Last week" },
+  { id: "month", label: "Last month" },
+];
+export const updatedField: PropertyField = {
+  id: "updated",
+  label: "Updated",
+  options: recencyOptions,
+};
+export const createdField: PropertyField = {
+  id: "created",
+  label: "Created",
+  options: recencyOptions,
+};

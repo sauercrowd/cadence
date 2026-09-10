@@ -169,10 +169,12 @@ body[data-keys="on"] .key-hint {
 .app-sidebar nav button,
 .phase-nav-item,
 .icon-button,
-.segmented.has-hint {
+.segmented.has-hint,
+.segment-control.has-hint {
   position: relative;
 }
-.segmented.has-hint .key-hint {
+.segmented.has-hint .key-hint,
+.segment-control.has-hint .key-hint {
   right: -4px;
   top: -6px;
   transform: none;
@@ -517,6 +519,27 @@ pre {
   padding-bottom: var(--s2);
   border-bottom: 1px solid var(--rule);
 }
+.segment-control {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  flex-shrink: 0;
+}
+.segment-control label {
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.segment-control select {
+  height: var(--ctl-h);
+  padding: var(--ctl-pad);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--surface);
+  font-size: var(--fs-ui);
+}
 
 .task-filter {
   position: relative;
@@ -621,7 +644,7 @@ pre {
 .table-heading,
 .task-row {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 210px;
+  grid-template-columns: 34px 34px minmax(0, 1fr) 210px;
   align-items: center;
   gap: var(--s3);
   padding: 0 var(--s3);
@@ -635,6 +658,25 @@ pre {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--faint);
+}
+.task-segment-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  height: var(--ctl-h);
+  padding: 0 var(--s3);
+  border-bottom: 1px solid var(--rule);
+  background: var(--ground);
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.task-segment-heading span:last-child {
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
 }
 .task-row {
   min-height: var(--row);
@@ -994,52 +1036,76 @@ body[data-keys="on"] .task-row.cursor::after {
   color: var(--faint);
 }
 
-.link-nav-item {
+.phase-header-links {
   display: flex;
   align-items: center;
-  min-width: 0;
-  min-height: 22px;
-  padding: 0 var(--s1) 0 6px;
-  border-radius: var(--r);
-  color: var(--muted);
-}
-.link-nav-item:hover {
-  background: var(--hover);
-}
-.link-nav-item .icon-button {
-  opacity: 0;
-}
-.link-nav-item:hover .icon-button,
-.link-nav-item .icon-button:focus-visible {
-  opacity: 1;
-}
-.link-nav-open {
-  display: flex;
-  align-items: center;
-  gap: 5px;
+  gap: var(--s1);
   flex: 1;
   min-width: 0;
-  font-size: var(--fs-ui);
-  color: inherit;
-  text-align: left;
+  margin-left: var(--s1);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
-.link-nav-open > span:not(.task-code) {
+.phase-header-links::-webkit-scrollbar {
+  display: none;
+}
+.phase-header-link {
+  display: inline-flex;
+  align-items: stretch;
+  flex: 0 0 auto;
+  height: 20px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--surface);
+  color: var(--muted);
+}
+.phase-header-link:hover {
+  border-color: var(--faint);
+  color: var(--structure);
+}
+.phase-header-link-open {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
   min-width: 0;
+  max-width: 176px;
+  padding: 0 5px;
+  color: inherit;
+  font-size: var(--fs-ui);
+}
+.phase-header-link-open > span:not(.task-code) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.link-nav-open svg {
-  flex-shrink: 0;
+.phase-header-link-open svg {
   color: var(--faint);
 }
-.link-nav-item:hover .link-nav-open {
+.phase-header-link-remove {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  border-left: 1px solid var(--rule);
+  color: var(--faint);
+}
+.phase-header-link-remove:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--danger);
+}
+.phase-header-link-add {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  color: var(--muted);
+}
+.phase-header-link-add:hover:not(:disabled) {
+  background: var(--hover);
+  border-color: var(--faint);
   color: var(--ink);
-}
-.link-empty {
-  padding: 0 6px;
-  font-size: var(--fs-ui);
-  color: var(--faint);
 }
 /* Must out-specify `[role="option"] span`, which stretches every child. */
 .task-switcher-results [role="option"] .task-code {
@@ -1195,6 +1261,7 @@ body[data-keys="on"] .task-row.cursor::after {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex: 1;
   min-width: 0;
 }
 .phase-header h2 {
@@ -1434,6 +1501,11 @@ body[data-keys="on"] .task-row.cursor::after {
 .editor-li {
   padding-left: 3px;
   margin-bottom: 3px;
+}
+.editor-li > .editor-ul,
+.editor-li > .editor-ol {
+  margin-top: 3px;
+  margin-bottom: 0;
 }
 .editor-unchecked,
 .editor-checked {
@@ -2148,7 +2220,7 @@ details > summary {
   }
   .table-heading,
   .task-row {
-    grid-template-columns: 30px minmax(0, 1fr) 170px;
+    grid-template-columns: 30px 30px minmax(0, 1fr) 170px;
     gap: var(--s2);
   }
 }
@@ -2194,7 +2266,7 @@ details > summary {
   /* Narrow: keep progress, drop the phase name. */
   .table-heading,
   .task-row {
-    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-columns: 28px 28px minmax(0, 1fr) auto;
   }
   .phase-label {
     display: none;

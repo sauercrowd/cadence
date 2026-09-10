@@ -30,6 +30,7 @@ import {
 import { LexicalExtensionComposer } from "@lexical/react/LexicalExtensionComposer";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
 import {
   RichTextExtension,
   $createHeadingNode,
@@ -39,6 +40,7 @@ import { HistoryExtension } from "@lexical/history";
 import {
   ListExtension,
   CheckListExtension,
+  $isListItemNode,
   INSERT_UNORDERED_LIST_COMMAND,
   INSERT_CHECK_LIST_COMMAND,
 } from "@lexical/list";
@@ -266,6 +268,10 @@ function RichEditor({
   }, []);
   return (
     <LexicalExtensionComposer extension={extension} contentEditable={null}>
+      <TabIndentationPlugin
+        maxIndent={6}
+        $canIndent={(node) => $isListItemNode(node)}
+      />
       <EditorSurface
         initial={initial}
         content={content}

@@ -38,6 +38,7 @@ export type Task = {
   revision: string;
   phases: Phase[];
   documents: { id: string; name: string; filename: string }[];
+  createdAt: number;
   updatedAt: number;
 };
 const statuses: Record<Status, TaskStatus> = {
@@ -68,6 +69,7 @@ function task(t: ProtoTask): Task {
         definition: p.definition!,
         documentId: p.documentId,
       })),
+    createdAt: Number(t.createdAt?.seconds || 0) * 1000,
     updatedAt: Number(t.updatedAt?.seconds || 0) * 1000,
   };
 }
