@@ -42,6 +42,8 @@
 
   /* --- geometry ------------------------------------------------------ */
   --r: 2px;
+  --focus-width: 1px;
+  --focus-offset: 2px;
   --row: 26px;
   --ctl-h: 22px;
   --ctl-pad: 3px 7px;
@@ -110,8 +112,8 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 [role="option"]:focus-visible {
-  outline: 2px solid var(--structure);
-  outline-offset: 1px;
+  outline: var(--focus-width) solid var(--structure);
+  outline-offset: var(--focus-offset);
 }
 a {
   color: var(--structure);
@@ -167,10 +169,12 @@ body[data-keys="on"] .key-hint {
 .app-sidebar nav button,
 .phase-nav-item,
 .icon-button,
-.segmented.has-hint {
+.segmented.has-hint,
+.segment-control.has-hint {
   position: relative;
 }
-.segmented.has-hint .key-hint {
+.segmented.has-hint .key-hint,
+.segment-control.has-hint .key-hint {
   right: -4px;
   top: -6px;
   transform: none;
@@ -319,7 +323,9 @@ pre {
 
 .task-code {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: var(--fs-label);
+  flex-shrink: 0;
+  white-space: nowrap;
   letter-spacing: 0.04em;
   color: var(--faint);
   font-variant-numeric: tabular-nums;
@@ -513,6 +519,27 @@ pre {
   padding-bottom: var(--s2);
   border-bottom: 1px solid var(--rule);
 }
+.segment-control {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  flex-shrink: 0;
+}
+.segment-control label {
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.segment-control select {
+  height: var(--ctl-h);
+  padding: var(--ctl-pad);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--surface);
+  font-size: var(--fs-ui);
+}
 
 .task-filter {
   position: relative;
@@ -617,7 +644,7 @@ pre {
 .table-heading,
 .task-row {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 210px;
+  grid-template-columns: 34px 34px minmax(0, 1fr) 210px;
   align-items: center;
   gap: var(--s3);
   padding: 0 var(--s3);
@@ -631,6 +658,25 @@ pre {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--faint);
+}
+.task-segment-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  height: var(--ctl-h);
+  padding: 0 var(--s3);
+  border-bottom: 1px solid var(--rule);
+  background: var(--ground);
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.task-segment-heading span:last-child {
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
 }
 .task-row {
   min-height: var(--row);
@@ -915,12 +961,16 @@ body[data-keys="on"] .task-row.cursor::after {
   display: flex;
   flex-direction: column;
 }
+.phase-group {
+  position: relative;
+}
 .phase-nav-item {
   position: relative;
   display: flex;
   align-items: center;
   gap: 7px;
   min-width: 0;
+  min-height: var(--row);
   padding: 2px 6px;
   border-radius: var(--r);
   color: var(--muted);
@@ -950,6 +1000,121 @@ body[data-keys="on"] .task-row.cursor::after {
   white-space: nowrap;
 }
 .phase-nav-label svg {
+  color: var(--faint);
+}
+.phase-nav-label > span:not(.task-code) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Indented clear of the timeline rail, which is the only vertical line here. */
+.subphase-nav {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 22px;
+  margin-left: 20px;
+  padding: 0 var(--s1);
+  border-radius: var(--r);
+  color: var(--muted);
+}
+.subphase-nav:hover {
+  background: var(--hover);
+}
+.subphase-nav.selected {
+  background: var(--structure-soft);
+  color: var(--structure);
+}
+.subphase-nav input {
+  margin: 0;
+  accent-color: var(--structure);
+  flex-shrink: 0;
+}
+.phase-nav-label.is-complete > span:not(.task-code) {
+  text-decoration: line-through;
+  color: var(--faint);
+}
+
+.phase-header-links {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  flex: 1;
+  min-width: 0;
+  margin-left: var(--s1);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.phase-header-links::-webkit-scrollbar {
+  display: none;
+}
+.phase-header-link {
+  display: inline-flex;
+  align-items: stretch;
+  flex: 0 0 auto;
+  height: 20px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--surface);
+  color: var(--muted);
+}
+.phase-header-link:hover {
+  border-color: var(--faint);
+  color: var(--structure);
+}
+.phase-header-link-open {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  min-width: 0;
+  max-width: 176px;
+  padding: 0 5px;
+  color: inherit;
+  font-size: var(--fs-ui);
+}
+.phase-header-link-open > span:not(.task-code) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.phase-header-link-open svg {
+  color: var(--faint);
+}
+.phase-header-link-remove {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  border-left: 1px solid var(--rule);
+  color: var(--faint);
+}
+.phase-header-link-remove:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--danger);
+}
+.phase-header-link-add {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  color: var(--muted);
+}
+.phase-header-link-add:hover:not(:disabled) {
+  background: var(--hover);
+  border-color: var(--faint);
+  color: var(--ink);
+}
+/* Must out-specify `[role="option"] span`, which stretches every child. */
+.task-switcher-results [role="option"] .task-code {
+  flex: 0 0 auto;
+}
+.task-switcher-results [role="option"] .link-url {
+  flex: 0 1 auto;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
   color: var(--faint);
 }
 
@@ -1020,16 +1185,32 @@ body[data-keys="on"] .task-row.cursor::after {
   background: var(--signal-soft);
   color: var(--signal);
 }
-.phase-timeline .phase-nav-item:not(:last-child)::after {
+/* One unbroken rail down the badges. Each group draws the segment below its
+   own badge and the stub above it, so subphase rows of any height cannot
+   leave a gap. The amber run stops at the current badge. */
+.phase-group::before,
+.phase-group::after {
   content: "";
   position: absolute;
   left: 13.5px; /* 6px padding + half of the 16px badge */
-  top: 50%;
-  bottom: -50%;
   width: 1px;
   background: var(--rule);
 }
-.phase-timeline .phase-nav-item.is-done::after {
+.phase-group::before {
+  top: 13px; /* half of the --row-tall phase row */
+  bottom: 0;
+}
+.phase-group::after {
+  top: 0;
+  height: 13px;
+}
+.phase-group:last-child::before,
+.phase-group:first-child::after {
+  display: none;
+}
+.phase-group.is-done::before,
+.phase-group.is-done::after,
+.phase-group.is-current::after {
   background: var(--signal);
 }
 
@@ -1080,6 +1261,7 @@ body[data-keys="on"] .task-row.cursor::after {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex: 1;
   min-width: 0;
 }
 .phase-header h2 {
@@ -1146,13 +1328,17 @@ body[data-keys="on"] .task-row.cursor::after {
   text-transform: uppercase;
   color: var(--faint);
 }
+/* Floats over the selection, so it is reachable at any scroll position. */
 .format-toolbar {
+  z-index: 60;
   display: flex;
   align-items: center;
   gap: 1px;
-  padding: 3px 0;
-  margin-bottom: var(--s4);
-  border-bottom: 1px solid var(--rule);
+  padding: 3px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--surface);
+  box-shadow: 0 6px 18px rgb(16 24 32 / 14%);
 }
 .format-toolbar button {
   display: grid;
@@ -1315,6 +1501,11 @@ body[data-keys="on"] .task-row.cursor::after {
 .editor-li {
   padding-left: 3px;
   margin-bottom: 3px;
+}
+.editor-li > .editor-ul,
+.editor-li > .editor-ol {
+  margin-top: 3px;
+  margin-bottom: 0;
 }
 .editor-unchecked,
 .editor-checked {
@@ -1543,11 +1734,15 @@ body[data-keys="on"] .task-row.cursor::after {
    ========================================================================== */
 
 .modal {
+  display: flex;
+  flex-direction: column;
   width: 440px;
   max-width: calc(100vw - 32px);
   max-height: 85vh;
   padding: 0;
-  overflow: auto;
+  /* Visible so the "/" property picker can hang past the dialog edge; only
+     the one dialog with long content scrolls, and it scrolls its own body. */
+  overflow: visible;
   border: 1px solid var(--rule);
   border-radius: var(--r);
   background: var(--surface);
@@ -1573,6 +1768,13 @@ body[data-keys="on"] .task-row.cursor::after {
 }
 .modal-content {
   padding: var(--s3);
+}
+.modal.wide .modal-content {
+  min-height: 0;
+  overflow: auto;
+}
+.modal label + .stacked-field {
+  margin-top: var(--s3);
 }
 .modal-content > p {
   margin-bottom: var(--s3);
@@ -2018,7 +2220,7 @@ details > summary {
   }
   .table-heading,
   .task-row {
-    grid-template-columns: 30px minmax(0, 1fr) 170px;
+    grid-template-columns: 30px 30px minmax(0, 1fr) 170px;
     gap: var(--s2);
   }
 }
@@ -2064,7 +2266,7 @@ details > summary {
   /* Narrow: keep progress, drop the phase name. */
   .table-heading,
   .task-row {
-    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-columns: 28px 28px minmax(0, 1fr) auto;
   }
   .phase-label {
     display: none;

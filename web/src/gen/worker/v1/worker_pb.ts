@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file worker/v1/worker.proto.
  */
 export const file_worker_v1_worker: GenFile = /*@__PURE__*/
-  fileDesc("ChZ3b3JrZXIvdjEvd29ya2VyLnByb3RvEgl3b3JrZXIudjEiPQoPRG9jdW1lbnRTdW1tYXJ5EgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEAoIZmlsZW5hbWUYAyABKAki7gIKBFRhc2sSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRItCglkb2N1bWVudHMYAyADKAsyGi53b3JrZXIudjEuRG9jdW1lbnRTdW1tYXJ5Ei4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiUKBnN0YXR1cxgGIAEoDjIVLndvcmtlci52MS5UYXNrU3RhdHVzEhAKCHByaW9yaXR5GAcgASgFEiwKDGFnZW50X3N0YXR1cxgIIAEoDjIWLndvcmtlci52MS5BZ2VudFN0YXR1cxIYChBjdXJyZW50X3BoYXNlX2lkGAogASgJEiQKBnBoYXNlcxgLIAMoCzIULndvcmtlci52MS5UYXNrUGhhc2USEAoIcmV2aXNpb24YDCABKAlKBAgJEAoibAoPUGhhc2VEZWZpbml0aW9uEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDAoEbW9kZRgEIAEoCRIZChFkb2N1bWVudF90ZW1wbGF0ZRgGIAEoCUoECAMQBEoECAUQBkoECAcQCEoECAgQCSJiCglUYXNrUGhhc2USLgoKZGVmaW5pdGlvbhgBIAEoCzIaLndvcmtlci52MS5QaGFzZURlZmluaXRpb24SEwoLZG9jdW1lbnRfaWQYAiABKAlKBAgDEARKBAgEEAVKBAgFEAYiSAoIV29ya2Zsb3cSKgoGcGhhc2VzGAEgAygLMhoud29ya2VyLnYxLlBoYXNlRGVmaW5pdGlvbhIQCghyZXZpc2lvbhgCIAEoCSI8Cg1Xb3Jrc3BhY2VJbmZvEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEQoJbG9nb19wYXRoGAMgASgJIvcBChFVcGRhdGVUYXNrUmVxdWVzdBIKCgJpZBgBIAEoCRIQCghyZXZpc2lvbhgCIAEoCRIMCgRuYW1lGAMgASgJEiUKBnN0YXR1cxgEIAEoDjIVLndvcmtlci52MS5UYXNrU3RhdHVzEhAKCHByaW9yaXR5GAUgASgFEiwKDGFnZW50X3N0YXR1cxgGIAEoDjIWLndvcmtlci52MS5BZ2VudFN0YXR1cxIvCgt1cGRhdGVfbWFzaxgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE1hc2sSGAoQY3VycmVudF9waGFzZV9pZBgJIAEoCUoECAcQCCJQChVVcGRhdGVXb3JrZmxvd1JlcXVlc3QSJQoId29ya2Zsb3cYASABKAsyEy53b3JrZXIudjEuV29ya2Zsb3cSEAoIcmV2aXNpb24YAiABKAkiagoIRG9jdW1lbnQSCgoCaWQYASABKAkSDwoHdGFza19pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhAKCGZpbGVuYW1lGAQgASgJEg8KB2NvbnRlbnQYBSABKAkSEAoIcmV2aXNpb24YBiABKAkiQwoRTGlzdFRhc2tzUmVzcG9uc2USHgoFdGFza3MYASADKAsyDy53b3JrZXIudjEuVGFzaxIOCgZlcnJvcnMYAiADKAkiIQoRQ3JlYXRlVGFza1JlcXVlc3QSDAoEbmFtZRgBIAEoCSIeCgtUYXNrUmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJIjIKEVJlbmFtZVRhc2tSZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkSDAoEbmFtZRgCIAEoCSI2ChVDcmVhdGVEb2N1bWVudFJlcXVlc3QSDwoHdGFza19pZBgBIAEoCRIMCgRuYW1lGAIgASgJIjcKD0RvY3VtZW50UmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJEhMKC2RvY3VtZW50X2lkGAIgASgJIksKFVJlbmFtZURvY3VtZW50UmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJEhMKC2RvY3VtZW50X2lkGAIgASgJEgwKBG5hbWUYAyABKAkiYAoVVXBkYXRlRG9jdW1lbnRSZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkSEwoLZG9jdW1lbnRfaWQYAiABKAkSDwoHY29udGVudBgDIAEoCRIQCghyZXZpc2lvbhgEIAEoCSqGAQoKVGFza1N0YXR1cxIbChdUQVNLX1NUQVRVU19VTlNQRUNJRklFRBAAEhQKEFRBU0tfU1RBVFVTX09QRU4QARIVChFUQVNLX1NUQVRVU19GT0NVUxACEhQKEFRBU0tfU1RBVFVTX0RPTkUQAxIYChRUQVNLX1NUQVRVU19BUkNISVZFRBAEKj4KC0FnZW50U3RhdHVzEhUKEUFHRU5UX1NUQVRVU19OT05FEAASGAoUQUdFTlRfU1RBVFVTX1dPUktJTkcQATLRBwoQV29ya3NwYWNlU2VydmljZRJFCgxHZXRXb3Jrc3BhY2USFi5nb29nbGUucHJvdG9idWYuRW1wdHkaGC53b3JrZXIudjEuV29ya3NwYWNlSW5mbyIDkAIBEjcKB0dldFRhc2sSFi53b3JrZXIudjEuVGFza1JlcXVlc3QaDy53b3JrZXIudjEuVGFzayIDkAIBEj0KClVwZGF0ZVRhc2sSHC53b3JrZXIudjEuVXBkYXRlVGFza1JlcXVlc3QaDy53b3JrZXIudjEuVGFzayIAEj8KC0dldFdvcmtmbG93EhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5GhMud29ya2VyLnYxLldvcmtmbG93IgOQAgESSQoOVXBkYXRlV29ya2Zsb3cSIC53b3JrZXIudjEuVXBkYXRlV29ya2Zsb3dSZXF1ZXN0GhMud29ya2VyLnYxLldvcmtmbG93IgASRgoJTGlzdFRhc2tzEhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5Ghwud29ya2VyLnYxLkxpc3RUYXNrc1Jlc3BvbnNlIgOQAgESPQoKQ3JlYXRlVGFzaxIcLndvcmtlci52MS5DcmVhdGVUYXNrUmVxdWVzdBoPLndvcmtlci52MS5UYXNrIgASPQoKUmVuYW1lVGFzaxIcLndvcmtlci52MS5SZW5hbWVUYXNrUmVxdWVzdBoPLndvcmtlci52MS5UYXNrIgASPgoKRGVsZXRlVGFzaxIWLndvcmtlci52MS5UYXNrUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eSIAEkkKDkNyZWF0ZURvY3VtZW50EiAud29ya2VyLnYxLkNyZWF0ZURvY3VtZW50UmVxdWVzdBoTLndvcmtlci52MS5Eb2N1bWVudCIAEkMKC0dldERvY3VtZW50Ehoud29ya2VyLnYxLkRvY3VtZW50UmVxdWVzdBoTLndvcmtlci52MS5Eb2N1bWVudCIDkAIBEkkKDlJlbmFtZURvY3VtZW50EiAud29ya2VyLnYxLlJlbmFtZURvY3VtZW50UmVxdWVzdBoTLndvcmtlci52MS5Eb2N1bWVudCIAEkkKDlVwZGF0ZURvY3VtZW50EiAud29ya2VyLnYxLlVwZGF0ZURvY3VtZW50UmVxdWVzdBoTLndvcmtlci52MS5Eb2N1bWVudCIAEkYKDkRlbGV0ZURvY3VtZW50Ehoud29ya2VyLnYxLkRvY3VtZW50UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eSIAQjVaM2dpdGh1Yi5jb20vc2F1ZXJjcm93ZC93b3JrZXIvZ2VuL3dvcmtlci92MTt3b3JrZXJ2MWIGcHJvdG8z", [file_google_protobuf_empty, file_google_protobuf_timestamp, file_google_protobuf_field_mask]);
+  fileDesc("ChZ3b3JrZXIvdjEvd29ya2VyLnByb3RvEgl3b3JrZXIudjEiPQoPRG9jdW1lbnRTdW1tYXJ5EgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEAoIZmlsZW5hbWUYAyABKAkiywMKBFRhc2sSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRItCglkb2N1bWVudHMYAyADKAsyGi53b3JrZXIudjEuRG9jdW1lbnRTdW1tYXJ5Ei4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiUKBnN0YXR1cxgGIAEoDjIVLndvcmtlci52MS5UYXNrU3RhdHVzEhAKCHByaW9yaXR5GAcgASgFEiwKDGFnZW50X3N0YXR1cxgIIAEoDjIWLndvcmtlci52MS5BZ2VudFN0YXR1cxIYChBjdXJyZW50X3BoYXNlX2lkGAogASgJEiQKBnBoYXNlcxgLIAMoCzIULndvcmtlci52MS5UYXNrUGhhc2USEAoIcmV2aXNpb24YDCABKAkSDgoGbnVtYmVyGA0gASgFEiYKCXN1YnBoYXNlcxgOIAMoCzITLndvcmtlci52MS5TdWJwaGFzZRIjCgVsaW5rcxgPIAMoCzIULndvcmtlci52MS5QaGFzZUxpbmtKBAgJEAoiXQoIU3VicGhhc2USDgoGbnVtYmVyGAEgASgFEhAKCHBoYXNlX2lkGAIgASgJEhMKC2RvY3VtZW50X2lkGAMgASgJEgwKBG5hbWUYBCABKAkSDAoEZG9uZRgFIAEoCCJaChVDcmVhdGVTdWJwaGFzZVJlcXVlc3QSDwoHdGFza19pZBgBIAEoCRIQCghwaGFzZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhAKCHJldmlzaW9uGAQgASgJIlgKFVVwZGF0ZVN1YnBoYXNlUmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJEg4KBm51bWJlchgCIAEoBRIMCgRkb25lGAMgASgIEhAKCHJldmlzaW9uGAQgASgJIkkKCVBoYXNlTGluaxIOCgZudW1iZXIYASABKAUSEAoIcGhhc2VfaWQYAiABKAkSCwoDdXJsGAMgASgJEg0KBXRpdGxlGAQgASgJImkKFkNyZWF0ZVBoYXNlTGlua1JlcXVlc3QSDwoHdGFza19pZBgBIAEoCRIQCghwaGFzZV9pZBgCIAEoCRILCgN1cmwYAyABKAkSDQoFdGl0bGUYBCABKAkSEAoIcmV2aXNpb24YBSABKAkiSwoWRGVsZXRlUGhhc2VMaW5rUmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJEg4KBm51bWJlchgCIAEoBRIQCghyZXZpc2lvbhgDIAEoCSJ8Cg9QaGFzZURlZmluaXRpb24SCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIMCgRtb2RlGAQgASgJEhkKEWRvY3VtZW50X3RlbXBsYXRlGAYgASgJEg4KBm51bWJlchgJIAEoBUoECAMQBEoECAUQBkoECAcQCEoECAgQCSJiCglUYXNrUGhhc2USLgoKZGVmaW5pdGlvbhgBIAEoCzIaLndvcmtlci52MS5QaGFzZURlZmluaXRpb24SEwoLZG9jdW1lbnRfaWQYAiABKAlKBAgDEARKBAgEEAVKBAgFEAYiSAoIV29ya2Zsb3cSKgoGcGhhc2VzGAEgAygLMhoud29ya2VyLnYxLlBoYXNlRGVmaW5pdGlvbhIQCghyZXZpc2lvbhgCIAEoCSI8Cg1Xb3Jrc3BhY2VJbmZvEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEQoJbG9nb19wYXRoGAMgASgJIvcBChFVcGRhdGVUYXNrUmVxdWVzdBIKCgJpZBgBIAEoCRIQCghyZXZpc2lvbhgCIAEoCRIMCgRuYW1lGAMgASgJEiUKBnN0YXR1cxgEIAEoDjIVLndvcmtlci52MS5UYXNrU3RhdHVzEhAKCHByaW9yaXR5GAUgASgFEiwKDGFnZW50X3N0YXR1cxgGIAEoDjIWLndvcmtlci52MS5BZ2VudFN0YXR1cxIvCgt1cGRhdGVfbWFzaxgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE1hc2sSGAoQY3VycmVudF9waGFzZV9pZBgJIAEoCUoECAcQCCJQChVVcGRhdGVXb3JrZmxvd1JlcXVlc3QSJQoId29ya2Zsb3cYASABKAsyEy53b3JrZXIudjEuV29ya2Zsb3cSEAoIcmV2aXNpb24YAiABKAkiagoIRG9jdW1lbnQSCgoCaWQYASABKAkSDwoHdGFza19pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhAKCGZpbGVuYW1lGAQgASgJEg8KB2NvbnRlbnQYBSABKAkSEAoIcmV2aXNpb24YBiABKAkiQwoRTGlzdFRhc2tzUmVzcG9uc2USHgoFdGFza3MYASADKAsyDy53b3JrZXIudjEuVGFzaxIOCgZlcnJvcnMYAiADKAkiIQoRQ3JlYXRlVGFza1JlcXVlc3QSDAoEbmFtZRgBIAEoCSIeCgtUYXNrUmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJIjIKEVJlbmFtZVRhc2tSZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkSDAoEbmFtZRgCIAEoCSI2ChVDcmVhdGVEb2N1bWVudFJlcXVlc3QSDwoHdGFza19pZBgBIAEoCRIMCgRuYW1lGAIgASgJIjcKD0RvY3VtZW50UmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJEhMKC2RvY3VtZW50X2lkGAIgASgJIksKFVJlbmFtZURvY3VtZW50UmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJEhMKC2RvY3VtZW50X2lkGAIgASgJEgwKBG5hbWUYAyABKAkiYAoVVXBkYXRlRG9jdW1lbnRSZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkSEwoLZG9jdW1lbnRfaWQYAiABKAkSDwoHY29udGVudBgDIAEoCRIQCghyZXZpc2lvbhgEIAEoCSqGAQoKVGFza1N0YXR1cxIbChdUQVNLX1NUQVRVU19VTlNQRUNJRklFRBAAEhQKEFRBU0tfU1RBVFVTX09QRU4QARIVChFUQVNLX1NUQVRVU19GT0NVUxACEhQKEFRBU0tfU1RBVFVTX0RPTkUQAxIYChRUQVNLX1NUQVRVU19BUkNISVZFRBAEKj4KC0FnZW50U3RhdHVzEhUKEUFHRU5UX1NUQVRVU19OT05FEAASGAoUQUdFTlRfU1RBVFVTX1dPUktJTkcQATLxCQoQV29ya3NwYWNlU2VydmljZRJFCg5DcmVhdGVTdWJwaGFzZRIgLndvcmtlci52MS5DcmVhdGVTdWJwaGFzZVJlcXVlc3QaDy53b3JrZXIudjEuVGFzayIAEkUKDlVwZGF0ZVN1YnBoYXNlEiAud29ya2VyLnYxLlVwZGF0ZVN1YnBoYXNlUmVxdWVzdBoPLndvcmtlci52MS5UYXNrIgASRwoPQ3JlYXRlUGhhc2VMaW5rEiEud29ya2VyLnYxLkNyZWF0ZVBoYXNlTGlua1JlcXVlc3QaDy53b3JrZXIudjEuVGFzayIAEkcKD0RlbGV0ZVBoYXNlTGluaxIhLndvcmtlci52MS5EZWxldGVQaGFzZUxpbmtSZXF1ZXN0Gg8ud29ya2VyLnYxLlRhc2siABJFCgxHZXRXb3Jrc3BhY2USFi5nb29nbGUucHJvdG9idWYuRW1wdHkaGC53b3JrZXIudjEuV29ya3NwYWNlSW5mbyIDkAIBEjcKB0dldFRhc2sSFi53b3JrZXIudjEuVGFza1JlcXVlc3QaDy53b3JrZXIudjEuVGFzayIDkAIBEj0KClVwZGF0ZVRhc2sSHC53b3JrZXIudjEuVXBkYXRlVGFza1JlcXVlc3QaDy53b3JrZXIudjEuVGFzayIAEj8KC0dldFdvcmtmbG93EhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5GhMud29ya2VyLnYxLldvcmtmbG93IgOQAgESSQoOVXBkYXRlV29ya2Zsb3cSIC53b3JrZXIudjEuVXBkYXRlV29ya2Zsb3dSZXF1ZXN0GhMud29ya2VyLnYxLldvcmtmbG93IgASRgoJTGlzdFRhc2tzEhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5Ghwud29ya2VyLnYxLkxpc3RUYXNrc1Jlc3BvbnNlIgOQAgESPQoKQ3JlYXRlVGFzaxIcLndvcmtlci52MS5DcmVhdGVUYXNrUmVxdWVzdBoPLndvcmtlci52MS5UYXNrIgASPQoKUmVuYW1lVGFzaxIcLndvcmtlci52MS5SZW5hbWVUYXNrUmVxdWVzdBoPLndvcmtlci52MS5UYXNrIgASPgoKRGVsZXRlVGFzaxIWLndvcmtlci52MS5UYXNrUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eSIAEkkKDkNyZWF0ZURvY3VtZW50EiAud29ya2VyLnYxLkNyZWF0ZURvY3VtZW50UmVxdWVzdBoTLndvcmtlci52MS5Eb2N1bWVudCIAEkMKC0dldERvY3VtZW50Ehoud29ya2VyLnYxLkRvY3VtZW50UmVxdWVzdBoTLndvcmtlci52MS5Eb2N1bWVudCIDkAIBEkkKDlJlbmFtZURvY3VtZW50EiAud29ya2VyLnYxLlJlbmFtZURvY3VtZW50UmVxdWVzdBoTLndvcmtlci52MS5Eb2N1bWVudCIAEkkKDlVwZGF0ZURvY3VtZW50EiAud29ya2VyLnYxLlVwZGF0ZURvY3VtZW50UmVxdWVzdBoTLndvcmtlci52MS5Eb2N1bWVudCIAEkYKDkRlbGV0ZURvY3VtZW50Ehoud29ya2VyLnYxLkRvY3VtZW50UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eSIAQjVaM2dpdGh1Yi5jb20vc2F1ZXJjcm93ZC93b3JrZXIvZ2VuL3dvcmtlci92MTt3b3JrZXJ2MWIGcHJvdG8z", [file_google_protobuf_empty, file_google_protobuf_timestamp, file_google_protobuf_field_mask]);
 
 /**
  * @generated from message worker.v1.DocumentSummary
@@ -99,6 +99,21 @@ export type Task = Message<"worker.v1.Task"> & {
    * @generated from field: string revision = 12;
    */
   revision: string;
+
+  /**
+   * @generated from field: int32 number = 13;
+   */
+  number: number;
+
+  /**
+   * @generated from field: repeated worker.v1.Subphase subphases = 14;
+   */
+  subphases: Subphase[];
+
+  /**
+   * @generated from field: repeated worker.v1.PhaseLink links = 15;
+   */
+  links: PhaseLink[];
 };
 
 /**
@@ -107,6 +122,206 @@ export type Task = Message<"worker.v1.Task"> & {
  */
 export const TaskSchema: GenMessage<Task> = /*@__PURE__*/
   messageDesc(file_worker_v1_worker, 1);
+
+/**
+ * @generated from message worker.v1.Subphase
+ */
+export type Subphase = Message<"worker.v1.Subphase"> & {
+  /**
+   * @generated from field: int32 number = 1;
+   */
+  number: number;
+
+  /**
+   * @generated from field: string phase_id = 2;
+   */
+  phaseId: string;
+
+  /**
+   * @generated from field: string document_id = 3;
+   */
+  documentId: string;
+
+  /**
+   * @generated from field: string name = 4;
+   */
+  name: string;
+
+  /**
+   * @generated from field: bool done = 5;
+   */
+  done: boolean;
+};
+
+/**
+ * Describes the message worker.v1.Subphase.
+ * Use `create(SubphaseSchema)` to create a new message.
+ */
+export const SubphaseSchema: GenMessage<Subphase> = /*@__PURE__*/
+  messageDesc(file_worker_v1_worker, 2);
+
+/**
+ * @generated from message worker.v1.CreateSubphaseRequest
+ */
+export type CreateSubphaseRequest = Message<"worker.v1.CreateSubphaseRequest"> & {
+  /**
+   * @generated from field: string task_id = 1;
+   */
+  taskId: string;
+
+  /**
+   * @generated from field: string phase_id = 2;
+   */
+  phaseId: string;
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string revision = 4;
+   */
+  revision: string;
+};
+
+/**
+ * Describes the message worker.v1.CreateSubphaseRequest.
+ * Use `create(CreateSubphaseRequestSchema)` to create a new message.
+ */
+export const CreateSubphaseRequestSchema: GenMessage<CreateSubphaseRequest> = /*@__PURE__*/
+  messageDesc(file_worker_v1_worker, 3);
+
+/**
+ * @generated from message worker.v1.UpdateSubphaseRequest
+ */
+export type UpdateSubphaseRequest = Message<"worker.v1.UpdateSubphaseRequest"> & {
+  /**
+   * @generated from field: string task_id = 1;
+   */
+  taskId: string;
+
+  /**
+   * @generated from field: int32 number = 2;
+   */
+  number: number;
+
+  /**
+   * @generated from field: bool done = 3;
+   */
+  done: boolean;
+
+  /**
+   * @generated from field: string revision = 4;
+   */
+  revision: string;
+};
+
+/**
+ * Describes the message worker.v1.UpdateSubphaseRequest.
+ * Use `create(UpdateSubphaseRequestSchema)` to create a new message.
+ */
+export const UpdateSubphaseRequestSchema: GenMessage<UpdateSubphaseRequest> = /*@__PURE__*/
+  messageDesc(file_worker_v1_worker, 4);
+
+/**
+ * Links are per-phase bookmarks. `number` is a stable id for deletion; the UI
+ * numbers them by their order within the phase.
+ *
+ * @generated from message worker.v1.PhaseLink
+ */
+export type PhaseLink = Message<"worker.v1.PhaseLink"> & {
+  /**
+   * @generated from field: int32 number = 1;
+   */
+  number: number;
+
+  /**
+   * @generated from field: string phase_id = 2;
+   */
+  phaseId: string;
+
+  /**
+   * @generated from field: string url = 3;
+   */
+  url: string;
+
+  /**
+   * @generated from field: string title = 4;
+   */
+  title: string;
+};
+
+/**
+ * Describes the message worker.v1.PhaseLink.
+ * Use `create(PhaseLinkSchema)` to create a new message.
+ */
+export const PhaseLinkSchema: GenMessage<PhaseLink> = /*@__PURE__*/
+  messageDesc(file_worker_v1_worker, 5);
+
+/**
+ * @generated from message worker.v1.CreatePhaseLinkRequest
+ */
+export type CreatePhaseLinkRequest = Message<"worker.v1.CreatePhaseLinkRequest"> & {
+  /**
+   * @generated from field: string task_id = 1;
+   */
+  taskId: string;
+
+  /**
+   * @generated from field: string phase_id = 2;
+   */
+  phaseId: string;
+
+  /**
+   * @generated from field: string url = 3;
+   */
+  url: string;
+
+  /**
+   * @generated from field: string title = 4;
+   */
+  title: string;
+
+  /**
+   * @generated from field: string revision = 5;
+   */
+  revision: string;
+};
+
+/**
+ * Describes the message worker.v1.CreatePhaseLinkRequest.
+ * Use `create(CreatePhaseLinkRequestSchema)` to create a new message.
+ */
+export const CreatePhaseLinkRequestSchema: GenMessage<CreatePhaseLinkRequest> = /*@__PURE__*/
+  messageDesc(file_worker_v1_worker, 6);
+
+/**
+ * @generated from message worker.v1.DeletePhaseLinkRequest
+ */
+export type DeletePhaseLinkRequest = Message<"worker.v1.DeletePhaseLinkRequest"> & {
+  /**
+   * @generated from field: string task_id = 1;
+   */
+  taskId: string;
+
+  /**
+   * @generated from field: int32 number = 2;
+   */
+  number: number;
+
+  /**
+   * @generated from field: string revision = 3;
+   */
+  revision: string;
+};
+
+/**
+ * Describes the message worker.v1.DeletePhaseLinkRequest.
+ * Use `create(DeletePhaseLinkRequestSchema)` to create a new message.
+ */
+export const DeletePhaseLinkRequestSchema: GenMessage<DeletePhaseLinkRequest> = /*@__PURE__*/
+  messageDesc(file_worker_v1_worker, 7);
 
 /**
  * @generated from message worker.v1.PhaseDefinition
@@ -131,6 +346,11 @@ export type PhaseDefinition = Message<"worker.v1.PhaseDefinition"> & {
    * @generated from field: string document_template = 6;
    */
   documentTemplate: string;
+
+  /**
+   * @generated from field: int32 number = 9;
+   */
+  number: number;
 };
 
 /**
@@ -138,7 +358,7 @@ export type PhaseDefinition = Message<"worker.v1.PhaseDefinition"> & {
  * Use `create(PhaseDefinitionSchema)` to create a new message.
  */
 export const PhaseDefinitionSchema: GenMessage<PhaseDefinition> = /*@__PURE__*/
-  messageDesc(file_worker_v1_worker, 2);
+  messageDesc(file_worker_v1_worker, 8);
 
 /**
  * @generated from message worker.v1.TaskPhase
@@ -160,7 +380,7 @@ export type TaskPhase = Message<"worker.v1.TaskPhase"> & {
  * Use `create(TaskPhaseSchema)` to create a new message.
  */
 export const TaskPhaseSchema: GenMessage<TaskPhase> = /*@__PURE__*/
-  messageDesc(file_worker_v1_worker, 3);
+  messageDesc(file_worker_v1_worker, 9);
 
 /**
  * @generated from message worker.v1.Workflow
@@ -182,7 +402,7 @@ export type Workflow = Message<"worker.v1.Workflow"> & {
  * Use `create(WorkflowSchema)` to create a new message.
  */
 export const WorkflowSchema: GenMessage<Workflow> = /*@__PURE__*/
-  messageDesc(file_worker_v1_worker, 4);
+  messageDesc(file_worker_v1_worker, 10);
 
 /**
  * @generated from message worker.v1.WorkspaceInfo
@@ -209,7 +429,7 @@ export type WorkspaceInfo = Message<"worker.v1.WorkspaceInfo"> & {
  * Use `create(WorkspaceInfoSchema)` to create a new message.
  */
 export const WorkspaceInfoSchema: GenMessage<WorkspaceInfo> = /*@__PURE__*/
-  messageDesc(file_worker_v1_worker, 5);
+  messageDesc(file_worker_v1_worker, 11);
 
 /**
  * @generated from message worker.v1.UpdateTaskRequest
@@ -261,7 +481,7 @@ export type UpdateTaskRequest = Message<"worker.v1.UpdateTaskRequest"> & {
  * Use `create(UpdateTaskRequestSchema)` to create a new message.
  */
 export const UpdateTaskRequestSchema: GenMessage<UpdateTaskRequest> = /*@__PURE__*/
-  messageDesc(file_worker_v1_worker, 6);
+  messageDesc(file_worker_v1_worker, 12);
 
 /**
  * @generated from message worker.v1.UpdateWorkflowRequest
@@ -283,7 +503,7 @@ export type UpdateWorkflowRequest = Message<"worker.v1.UpdateWorkflowRequest"> &
  * Use `create(UpdateWorkflowRequestSchema)` to create a new message.
  */
 export const UpdateWorkflowRequestSchema: GenMessage<UpdateWorkflowRequest> = /*@__PURE__*/
-  messageDesc(file_worker_v1_worker, 7);
+  messageDesc(file_worker_v1_worker, 13);
 
 /**
  * @generated from message worker.v1.Document
@@ -325,7 +545,7 @@ export type Document = Message<"worker.v1.Document"> & {
  * Use `create(DocumentSchema)` to create a new message.
  */
 export const DocumentSchema: GenMessage<Document> = /*@__PURE__*/
-  messageDesc(file_worker_v1_worker, 8);
+  messageDesc(file_worker_v1_worker, 14);
 
 /**
  * @generated from message worker.v1.ListTasksResponse
@@ -347,7 +567,7 @@ export type ListTasksResponse = Message<"worker.v1.ListTasksResponse"> & {
  * Use `create(ListTasksResponseSchema)` to create a new message.
  */
 export const ListTasksResponseSchema: GenMessage<ListTasksResponse> = /*@__PURE__*/
-  messageDesc(file_worker_v1_worker, 9);
+  messageDesc(file_worker_v1_worker, 15);
 
 /**
  * @generated from message worker.v1.CreateTaskRequest
@@ -364,7 +584,7 @@ export type CreateTaskRequest = Message<"worker.v1.CreateTaskRequest"> & {
  * Use `create(CreateTaskRequestSchema)` to create a new message.
  */
 export const CreateTaskRequestSchema: GenMessage<CreateTaskRequest> = /*@__PURE__*/
-  messageDesc(file_worker_v1_worker, 10);
+  messageDesc(file_worker_v1_worker, 16);
 
 /**
  * @generated from message worker.v1.TaskRequest
@@ -381,7 +601,7 @@ export type TaskRequest = Message<"worker.v1.TaskRequest"> & {
  * Use `create(TaskRequestSchema)` to create a new message.
  */
 export const TaskRequestSchema: GenMessage<TaskRequest> = /*@__PURE__*/
-  messageDesc(file_worker_v1_worker, 11);
+  messageDesc(file_worker_v1_worker, 17);
 
 /**
  * @generated from message worker.v1.RenameTaskRequest
@@ -403,7 +623,7 @@ export type RenameTaskRequest = Message<"worker.v1.RenameTaskRequest"> & {
  * Use `create(RenameTaskRequestSchema)` to create a new message.
  */
 export const RenameTaskRequestSchema: GenMessage<RenameTaskRequest> = /*@__PURE__*/
-  messageDesc(file_worker_v1_worker, 12);
+  messageDesc(file_worker_v1_worker, 18);
 
 /**
  * @generated from message worker.v1.CreateDocumentRequest
@@ -425,7 +645,7 @@ export type CreateDocumentRequest = Message<"worker.v1.CreateDocumentRequest"> &
  * Use `create(CreateDocumentRequestSchema)` to create a new message.
  */
 export const CreateDocumentRequestSchema: GenMessage<CreateDocumentRequest> = /*@__PURE__*/
-  messageDesc(file_worker_v1_worker, 13);
+  messageDesc(file_worker_v1_worker, 19);
 
 /**
  * @generated from message worker.v1.DocumentRequest
@@ -447,7 +667,7 @@ export type DocumentRequest = Message<"worker.v1.DocumentRequest"> & {
  * Use `create(DocumentRequestSchema)` to create a new message.
  */
 export const DocumentRequestSchema: GenMessage<DocumentRequest> = /*@__PURE__*/
-  messageDesc(file_worker_v1_worker, 14);
+  messageDesc(file_worker_v1_worker, 20);
 
 /**
  * @generated from message worker.v1.RenameDocumentRequest
@@ -474,7 +694,7 @@ export type RenameDocumentRequest = Message<"worker.v1.RenameDocumentRequest"> &
  * Use `create(RenameDocumentRequestSchema)` to create a new message.
  */
 export const RenameDocumentRequestSchema: GenMessage<RenameDocumentRequest> = /*@__PURE__*/
-  messageDesc(file_worker_v1_worker, 15);
+  messageDesc(file_worker_v1_worker, 21);
 
 /**
  * @generated from message worker.v1.UpdateDocumentRequest
@@ -506,7 +726,7 @@ export type UpdateDocumentRequest = Message<"worker.v1.UpdateDocumentRequest"> &
  * Use `create(UpdateDocumentRequestSchema)` to create a new message.
  */
 export const UpdateDocumentRequestSchema: GenMessage<UpdateDocumentRequest> = /*@__PURE__*/
-  messageDesc(file_worker_v1_worker, 16);
+  messageDesc(file_worker_v1_worker, 22);
 
 /**
  * @generated from enum worker.v1.TaskStatus
@@ -569,6 +789,38 @@ export const AgentStatusSchema: GenEnum<AgentStatus> = /*@__PURE__*/
  * @generated from service worker.v1.WorkspaceService
  */
 export const WorkspaceService: GenService<{
+  /**
+   * @generated from rpc worker.v1.WorkspaceService.CreateSubphase
+   */
+  createSubphase: {
+    methodKind: "unary";
+    input: typeof CreateSubphaseRequestSchema;
+    output: typeof TaskSchema;
+  },
+  /**
+   * @generated from rpc worker.v1.WorkspaceService.UpdateSubphase
+   */
+  updateSubphase: {
+    methodKind: "unary";
+    input: typeof UpdateSubphaseRequestSchema;
+    output: typeof TaskSchema;
+  },
+  /**
+   * @generated from rpc worker.v1.WorkspaceService.CreatePhaseLink
+   */
+  createPhaseLink: {
+    methodKind: "unary";
+    input: typeof CreatePhaseLinkRequestSchema;
+    output: typeof TaskSchema;
+  },
+  /**
+   * @generated from rpc worker.v1.WorkspaceService.DeletePhaseLink
+   */
+  deletePhaseLink: {
+    methodKind: "unary";
+    input: typeof DeletePhaseLinkRequestSchema;
+    output: typeof TaskSchema;
+  },
   /**
    * @generated from rpc worker.v1.WorkspaceService.GetWorkspace
    */

@@ -6,7 +6,12 @@ import {
   flattenFields,
   type PropertyField,
 } from "../../ui/PropertyMenu";
-import { priorityField, statusField } from "./propertyFields";
+import {
+  createdField,
+  priorityField,
+  statusField,
+  updatedField,
+} from "./propertyFields";
 
 const activityField: PropertyField = {
   id: "activity",
@@ -21,7 +26,17 @@ const fieldLabels: Record<string, string> = {
   status: "Status",
   phase: "Phase",
   activity: "Agent activity",
+  updated: "Updated",
+  created: "Created",
 };
+const filterFields = [
+  "priority",
+  "status",
+  "phase",
+  "activity",
+  "updated",
+  "created",
+];
 
 export function TaskFilter({
   route,
@@ -37,7 +52,14 @@ export function TaskFilter({
     label: "Phase",
     options: [...phases].map(([id, label]) => ({ id, label })),
   };
-  const allFields = [priorityField, statusField, phaseField, activityField];
+  const allFields = [
+    priorityField,
+    statusField,
+    phaseField,
+    activityField,
+    updatedField,
+    createdField,
+  ];
   const options = flattenFields(allFields);
   const valueLabel = (field: string, id: string) =>
     allFields.find((f) => f.id === field)?.options.find((o) => o.id === id)
@@ -46,7 +68,7 @@ export function TaskFilter({
     <div className="task-filter">
       <div className="task-filter-input">
         <Search size={14} className="muted" />
-        {["priority", "status", "phase", "activity"].map((field) => {
+        {filterFields.map((field) => {
           const id = route.searchParams.get(field);
           if (!id) return null;
           return (
@@ -55,6 +77,15 @@ export function TaskFilter({
               className="filter-token"
               aria-label={`Remove ${fieldLabels[field]}: ${valueLabel(field, id)}`}
               onClick={() => setQuery(field, "")}
+              onKeyDown={(event) => {
+                if (event.key === "Backspace" || event.key === "Delete") {
+                  event.preventDefault();
+                  setQuery(field, "");
+                  event.currentTarget.parentElement
+                    ?.querySelector("input")
+                    ?.focus();
+                }
+              }}
             >
               <span>
                 {fieldLabels[field]}: {valueLabel(field, id)}
@@ -65,10 +96,26 @@ export function TaskFilter({
         })}
         <input
           aria-label="Filter tasks"
-          placeholder="Filter… / for priority, status, phase, activity"
+          placeholder="Filter… / for priority, status, phase, activity, dates"
           value={value}
           onChange={(event) => setQuery("q", event.target.value)}
           onKeyDown={(event) => {
+            if (event.nativeEvent.isComposing) return;
+            if (
+              event.key === "Backspace" &&
+              !value &&
+              !event.ctrlKey &&
+              !event.metaKey &&
+              !event.altKey
+            ) {
+              const last = filterFields
+                .filter((field) => route.searchParams.has(field))
+                .at(-1);
+              if (last) {
+                event.preventDefault();
+                setQuery(last, "");
+              }
+            }
             if (event.key === "/" && !event.nativeEvent.isComposing) {
               event.preventDefault();
               setOpen(true);
@@ -80,7 +127,7 @@ export function TaskFilter({
         <PropertyPopup
           id="task-filter-options"
           options={options}
-          placeholder="Priority, status, phase, activity…"
+          placeholder="Priority, status, phase, activity, dates…"
           onChoose={(field, id) => {
             const url = new URL(route);
             url.searchParams.set(field, id);

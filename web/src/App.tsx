@@ -130,7 +130,19 @@ export default function App() {
     setCreating(true);
   };
   return (
-    <div className="app-shell">
+    <div className="app-shell" onKeyDownCapture={(event) => {
+      if (event.key !== "Escape" || event.nativeEvent.isComposing) return;
+      const target = event.target as HTMLElement;
+      // Popups own their first Escape; the next one leaves their input.
+      if (target.closest(".property-menu")) return;
+      const active = document.activeElement;
+      if (active instanceof HTMLElement &&
+          (active.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName))) {
+        event.preventDefault();
+        event.stopPropagation();
+        active.blur();
+      }
+    }}>
       <aside className="app-sidebar">
         <div className="workspace-label" title={workspace?.name}>
           {workspace?.logoPath && !logoBroken ? (
@@ -194,6 +206,7 @@ export default function App() {
                   <CircleDot size={15} />
                 )}
                 <span className="focused-task-title">{t.title}</span>
+                <span className="task-code">#{t.number}</span>
               </button>
             ))}
           {!tasks.some((t) => t.status === "focus") && (

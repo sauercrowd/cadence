@@ -1,4 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useFloating,
+  offset,
+  flip,
+  shift,
+  hide,
+  autoUpdate,
+  FloatingPortal,
+} from "@floating-ui/react";
 import {
   $createParagraphNode,
   $createTextNode,
@@ -21,6 +30,7 @@ import {
 import { LexicalExtensionComposer } from "@lexical/react/LexicalExtensionComposer";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
 import {
   RichTextExtension,
   $createHeadingNode,
@@ -30,6 +40,7 @@ import { HistoryExtension } from "@lexical/history";
 import {
   ListExtension,
   CheckListExtension,
+  $isListItemNode,
   INSERT_UNORDERED_LIST_COMMAND,
   INSERT_CHECK_LIST_COMMAND,
 } from "@lexical/list";
@@ -257,6 +268,10 @@ function RichEditor({
   }, []);
   return (
     <LexicalExtensionComposer extension={extension} contentEditable={null}>
+      <TabIndentationPlugin
+        maxIndent={6}
+        $canIndent={(node) => $isListItemNode(node)}
+      />
       <EditorSurface
         initial={initial}
         content={content}
@@ -268,6 +283,20 @@ function RichEditor({
       />
     </LexicalExtensionComposer>
   );
+}
+
+/**
+ * The live rect of the document selection, or null when there is nothing to
+ * format. Read fresh on every call so the floating toolbar tracks scrolling.
+ */
+function selectionRect(root: HTMLElement | null): DOMRect | null {
+  const selection = window.getSelection();
+  if (!root || !selection || selection.isCollapsed || !selection.rangeCount)
+    return null;
+  const range = selection.getRangeAt(0);
+  if (!root.contains(range.commonAncestorContainer)) return null;
+  const rect = range.getBoundingClientRect();
+  return rect.width || rect.height ? rect : null;
 }
 
 function EditorSurface({
@@ -285,6 +314,7 @@ function EditorSurface({
     [markers, setMarkers] = useState<
       { id: string; top: number; detached: boolean }[]
     >([]);
+  const [formatting, setFormatting] = useState(false);
   const root = useRef<HTMLDivElement>(null),
     selection = useRef<RangeSelection | null>(null),
     body = useRef(initial.body),
@@ -315,6 +345,47 @@ function EditorSurface({
       );
     });
   }
+  // The toolbar floats over the selection rather than sitting at the top of
+  // the document, so it stays within reach however far the document scrolls.
+  const { refs, floatingStyles, update, middlewareData } = useFloating({
+    open: formatting,
+    placement: "top",
+    middleware: [
+      offset(8),
+      flip({ padding: 8 }),
+      shift({ padding: 8 }),
+      // Scrolling the selection out of the pane hides the bubble instead of
+      // leaving it pinned to the edge.
+      hide({ padding: 8 }),
+    ],
+    whileElementsMounted: autoUpdate,
+  });
+  const syncToolbar = useCallback(() => {
+    const visible = !!selectionRect(root.current);
+    setFormatting(visible);
+    if (visible)
+      refs.setPositionReference({
+        getBoundingClientRect: () =>
+          selectionRect(root.current) ?? new DOMRect(),
+      });
+  }, [refs]);
+  useEffect(() => {
+    document.addEventListener("selectionchange", syncToolbar);
+    return () => document.removeEventListener("selectionchange", syncToolbar);
+  }, [syncToolbar]);
+  // autoUpdate cannot find the scroll ancestors of a virtual reference, so the
+  // document pane's own scrolling has to drive the reposition.
+  useEffect(() => {
+    if (!formatting) return;
+    const reposition = () => update();
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+    return () => {
+      window.removeEventListener("scroll", reposition, true);
+      window.removeEventListener("resize", reposition);
+    };
+  }, [formatting, update]);
+
   useEffect(() => {
     const unregister = editor.registerUpdateListener(
       ({ editorState, dirtyElements, dirtyLeaves, tags }) => {
@@ -560,105 +631,138 @@ function EditorSurface({
   }
   return (
     <>
-      <div className="format-toolbar" role="toolbar" aria-label="Formatting">
-        <button
-          aria-label="Bold"
-          title="Bold · ⌘B"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")}
-        >
-          <Bold size={15} />
-        </button>
-        <button
-          aria-label="Italic"
-          title="Italic · ⌘I"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic")}
-        >
-          <Italic size={15} />
-        </button>
-        <button
-          aria-label="Heading"
-          title="Heading"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => block("heading")}
-        >
-          <Heading2 size={16} />
-        </button>
-        <i />
-        <button
-          aria-label="Bullet list"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() =>
-            editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
+      {formatting && (
+        <FloatingPortal>
+          <div
+            ref={refs.setFloating}
+            style={{
+              ...floatingStyles,
+              visibility: middlewareData.hide?.referenceHidden
+                ? "hidden"
+                : "visible",
+            }}
+            className="format-toolbar"
+            role="toolbar"
+            aria-label="Formatting"
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            <button
+              aria-label="Bold"
+              title="Bold · ⌘B"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() =>
+                editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")
+              }
+            >
+              <Bold size={15} />
+            </button>
+            <button
+              aria-label="Italic"
+              title="Italic · ⌘I"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() =>
+                editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic")
+              }
+            >
+              <Italic size={15} />
+            </button>
+            <button
+              aria-label="Heading"
+              title="Heading"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => block("heading")}
+            >
+              <Heading2 size={16} />
+            </button>
+            <i />
+            <button
+              aria-label="Bullet list"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() =>
+                editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
+              }
+            >
+              <List size={16} />
+            </button>
+            <button
+              aria-label="Checklist"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() =>
+                editor.dispatchCommand(INSERT_CHECK_LIST_COMMAND, undefined)
+              }
+            >
+              <ListChecks size={16} />
+            </button>
+            <button
+              aria-label="Code block"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => block("code")}
+            >
+              <Code size={16} />
+            </button>
+            <button
+              aria-label="Insert table"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() =>
+                editor.dispatchCommand(INSERT_TABLE_COMMAND, {
+                  columns: "3",
+                  rows: "3",
+                  includeHeaders: true,
+                })
+              }
+            >
+              <Table size={15} />
+            </button>
+            <button
+              aria-label="Insert link"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                const url = window.prompt("Link URL (https://…)");
+                if (url && /^https?:\/\//i.test(url))
+                  editor.dispatchCommand(TOGGLE_LINK_COMMAND, url);
+              }}
+            >
+              <Link size={14} />
+            </button>
+            <i />
+            <button
+              aria-label="Add comment"
+              title="Comment on selection · ⌘⌥M"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={beginComment}
+            >
+              <MessageSquarePlus size={16} />
+            </button>
+            <i />
+            <button
+              aria-label="Undo"
+              onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
+            >
+              <Undo2 size={14} />
+            </button>
+            <button
+              aria-label="Redo"
+              onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
+            >
+              <Redo2 size={14} />
+            </button>
+          </div>
+        </FloatingPortal>
+      )}
+      <div
+        className="editor-paper"
+        ref={root}
+        onKeyDown={(event) => {
+          if (
+            (event.metaKey || event.ctrlKey) &&
+            event.altKey &&
+            event.key.toLowerCase() === "m"
+          ) {
+            event.preventDefault();
+            beginComment();
           }
-        >
-          <List size={16} />
-        </button>
-        <button
-          aria-label="Checklist"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() =>
-            editor.dispatchCommand(INSERT_CHECK_LIST_COMMAND, undefined)
-          }
-        >
-          <ListChecks size={16} />
-        </button>
-        <button
-          aria-label="Code block"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => block("code")}
-        >
-          <Code size={16} />
-        </button>
-        <button
-          aria-label="Insert table"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() =>
-            editor.dispatchCommand(INSERT_TABLE_COMMAND, {
-              columns: "3",
-              rows: "3",
-              includeHeaders: true,
-            })
-          }
-        >
-          <Table size={15} />
-        </button>
-        <button
-          aria-label="Insert link"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => {
-            const url = window.prompt("Link URL (https://…)");
-            if (url && /^https?:\/\//i.test(url))
-              editor.dispatchCommand(TOGGLE_LINK_COMMAND, url);
-          }}
-        >
-          <Link size={14} />
-        </button>
-        <i />
-        <button
-          aria-label="Add comment"
-          title="Select text to comment"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={beginComment}
-        >
-          <MessageSquarePlus size={16} />
-        </button>
-        <span className="toolbar-spacer" />
-        <button
-          aria-label="Undo"
-          onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
-        >
-          <Undo2 size={14} />
-        </button>
-        <button
-          aria-label="Redo"
-          onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
-        >
-          <Redo2 size={14} />
-        </button>
-      </div>
-      <div className="editor-paper" ref={root}>
+        }}
+      >
         <ContentEditable
           className="rich-editor"
           aria-label="Document body"

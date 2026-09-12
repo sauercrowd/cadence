@@ -16,7 +16,9 @@ export function TaskSwitcher({
   const [active, setActive] = useState(0);
   const list = useRef<HTMLDivElement>(null);
   const results = tasks
-    .filter((task) => task.title.toLowerCase().includes(query.toLowerCase()))
+    .filter((task) => /^#?\d+$/.test(query.trim())
+      ? String(task.number) === query.trim().replace(/^#/, "")
+      : task.title.toLowerCase().includes(query.toLowerCase()))
     .sort(
       (a, b) =>
         Number(b.status === "focus") - Number(a.status === "focus") ||
@@ -47,7 +49,7 @@ export function TaskSwitcher({
           aria-activedescendant={
             results.length ? `task-jump-${selected}` : undefined
           }
-          placeholder="Search tasks…"
+          placeholder="Task ID or title…"
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
@@ -61,15 +63,6 @@ export function TaskSwitcher({
               event.altKey
             )
               return;
-            if (
-              !query &&
-              /^[1-9]$/.test(event.key) &&
-              results[Number(event.key) - 1]
-            ) {
-              event.preventDefault();
-              jump(results[Number(event.key) - 1]);
-              return;
-            }
             if (event.key === "ArrowDown" || event.key === "ArrowUp") {
               event.preventDefault();
               setActive(
@@ -104,7 +97,7 @@ export function TaskSwitcher({
             >
               <StatusIcon status={task.status} />
               <span>{task.title}</span>
-              {!query && index < 9 && <kbd>{index + 1}</kbd>}
+              <span className="task-code">#{task.number}</span>
             </div>
           ))}
           {!results.length && (

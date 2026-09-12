@@ -96,6 +96,14 @@ func (h *Handler) DeleteDocument(_ context.Context, request *connect.Request[wor
 }
 
 func taskToProto(task workspace.Task) *workerv1.Task {
+	subphases := make([]*workerv1.Subphase, 0, len(task.Subphases))
+	for _, s := range task.Subphases {
+		subphases = append(subphases, &workerv1.Subphase{Number: int32(s.Number), PhaseId: s.PhaseID, DocumentId: s.DocumentID, Name: s.Name, Done: s.Done})
+	}
+	links := make([]*workerv1.PhaseLink, 0, len(task.Links))
+	for _, l := range task.Links {
+		links = append(links, &workerv1.PhaseLink{Number: int32(l.Number), PhaseId: l.PhaseID, Url: l.URL, Title: l.Title})
+	}
 	documents := make([]*workerv1.DocumentSummary, 0, len(task.Documents))
 	for _, document := range task.Documents {
 		documents = append(documents, &workerv1.DocumentSummary{
@@ -105,7 +113,9 @@ func taskToProto(task workspace.Task) *workerv1.Task {
 		})
 	}
 	return &workerv1.Task{
-		Id:        task.ID,
+		Subphases: subphases,
+		Links:     links,
+		Id:        task.ID, Number: int32(task.Number),
 		Name:      task.Name,
 		Documents: documents,
 		CreatedAt: timestamppb.New(task.CreatedAt),
