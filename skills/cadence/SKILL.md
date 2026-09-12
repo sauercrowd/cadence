@@ -8,9 +8,7 @@ It is an opinionated tool to manage tasks between a user and agents, and not jus
 With the goal that the user needs to think about less on how to structure the work but instead can focus on the problem at hand.
 
 It does it by mostly tracking tasks, and each tasks is broken down into phases (when it's a larger piece of work).
-The phases are configured centrally and make it clear what is expected from the user, from the agent, and if it's an interactive or async task.
-An interactive task means the user is fully focused on it, an async tasks mean the user will switch away to do other things so the agent should spend more time on validating proactively so that
-when the user comes back as much as possible is moved out of the way.
+The phases are configured centrally and make it clear what is expected from the user and the agent.
 
 A phase just consists of a title and a markdown doc. The markdown doc is the "spec" for that task, but it contains an <agent-instructions></agent-instructions> section that is default hidden (since it will change rarely). in the agent instructions - if exists - are any extra instructions to you when working on that task. The spec itself will define what you're agreeing on with the user.
 The spec supports adding comments (both by you and the user), which will just get dumped in a special comments section in the markdown so it's simple (that section will be hidden from the user, and the comments will be rendered out nicely and overlay appropriately).
@@ -62,6 +60,7 @@ service WorkspaceService {
   rpc UpdateSubphase(UpdateSubphaseRequest) returns (Task);
   rpc CreatePhaseLink(CreatePhaseLinkRequest) returns (Task);
   rpc DeletePhaseLink(DeletePhaseLinkRequest) returns (Task);
+  rpc UpsertAgentSession(UpsertAgentSessionRequest) returns (Task);
 
   rpc CreateDocument(CreateDocumentRequest) returns (Document);
   rpc GetDocument(DocumentRequest) returns (Document);
@@ -88,6 +87,8 @@ message Task {
   int32 number = 13;                        // the "#4" the user sees
   repeated Subphase subphases = 14;
   repeated PhaseLink links = 15;
+  repeated AgentSession agents = 16;
+  repeated AgentUpdate agent_updates = 17;
 }
 message DocumentSummary { string id = 1; string name = 2; string filename = 3; }
 message Document {
@@ -95,7 +96,7 @@ message Document {
   string filename = 4; string content = 5; string revision = 6;
 }
 message PhaseDefinition {
-  string id = 1; string name = 2; string mode = 4;   // "interactive" | "async"
+  string id = 1; string name = 2;
   string document_template = 6; int32 number = 9;
 }
 message TaskPhase { PhaseDefinition definition = 1; string document_id = 2; }
@@ -111,6 +112,15 @@ message Subphase {
 // A per-phase bookmark (PR, dashboard, spec). http/https only.
 message PhaseLink {
   int32 number = 1; string phase_id = 2; string url = 3; string title = 4;
+}
+message AgentSession {
+  string session_id = 1; string name = 2; string scope = 3;
+  string phase_id = 4; int32 subphase_number = 5; string status = 6;
+  google.protobuf.Timestamp last_seen = 7; bool active = 8;
+}
+message AgentUpdate {
+  int32 number = 1; string session_id = 2; string body = 3;
+  google.protobuf.Timestamp created_at = 4;
 }
 
 enum TaskStatus {
@@ -141,6 +151,11 @@ message CreatePhaseLinkRequest {
 }
 message DeletePhaseLinkRequest {
   string task_id = 1; int32 number = 2; string revision = 3;
+}
+message UpsertAgentSessionRequest {
+  string task_id = 1; string session_id = 2; string name = 3;
+  string scope = 4; string phase_id = 5; int32 subphase_number = 6;
+  string status = 7; string update = 8;
 }
 message CreateDocumentRequest { string task_id = 1; string name = 2; }
 message DocumentRequest { string task_id = 1; string document_id = 2; }
@@ -191,6 +206,40 @@ on. A mismatch is rejected as a conflict (Connect code `aborted`) — re-read,
 re-apply your change to the fresh content, and retry. Never invent or reuse a
 revision. Task-level writes (including subphase and link changes) use the task
 revision; document writes use the document revision.
+
+Agent sessions are independent so parallel agents do not contend on the task
+revision. Generate one UUID per agent session and call `UpsertAgentSession`
+when starting, changing scope/status, posting a progress update, or refreshing
+activity. Status is `working`, `waiting`, or `done`; `update` may be empty for a
+heartbeat. Associate a session with either `phaseId`, `subphaseNumber`, or
+neither. Sessions become inactive after 24 hours without an update and reactivate
+when the same UUID updates again.
+
+When you begin work on an existing task, register the session before making
+task changes. Keep the session current for the entire time you are working:
+update its scope when your work changes, set `waiting` immediately when you
+need a decision or dependency, return it to `working` when work resumes, and
+send a heartbeat before 24 hours elapse. Post concise progress updates at
+meaningful milestones and set the session to `done` at handoff. Never leave a
+session showing `working` after you stop work.
+
+`GetTask` includes all agent sessions and the latest 50 agent updates. Whenever
+you pull a task, inspect active sessions first and briefly summarize who is
+working on what. Use that context to choose and register a non-conflicting
+scope. Ignore inactive sessions unless their recent updates affect the work.
+
+When you have an idea that is not yet agreed, add it inline as a suggestion
+instead of merging it into the spec:
+
+````md
+```suggestion-Codex
+Use a compact status icon beside each active agent.
+```
+````
+
+Use `suggestion-<agent-name>` as the fence language, replacing spaces in the
+name with hyphens. Keep the content concise and remove the fence once the user
+accepts the idea.
 
 ## Document content
 

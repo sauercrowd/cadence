@@ -133,7 +133,7 @@ func (s *Store) readWorkflow() (Workflow, error) {
 	}
 	w := Workflow{Revision: state.Revision}
 	for _, r := range records {
-		w.Phases = append(w.Phases, PhaseDefinition{ID: r.ID, Number: r.Number, Name: r.Name, Mode: r.Mode, DocumentTemplate: r.Template})
+		w.Phases = append(w.Phases, PhaseDefinition{ID: r.ID, Number: r.Number, Name: r.Name, DocumentTemplate: r.Template})
 	}
 	return w, validateWorkflow(w)
 }
@@ -149,7 +149,7 @@ func validateWorkflow(w Workflow) error {
 	ids := map[string]bool{}
 	numbers := map[int]bool{}
 	for _, p := range w.Phases {
-		if !regexp.MustCompile(`^[a-zA-Z0-9_-]{1,80}$`).MatchString(p.ID) || ids[p.ID] || p.Number < 1 || numbers[p.Number] || strings.TrimSpace(p.Name) == "" || (p.Mode != "interactive" && p.Mode != "async") {
+		if !regexp.MustCompile(`^[a-zA-Z0-9_-]{1,80}$`).MatchString(p.ID) || ids[p.ID] || p.Number < 1 || numbers[p.Number] || strings.TrimSpace(p.Name) == "" {
 			return fmt.Errorf("%w: invalid or duplicate phase", ErrInvalidName)
 		}
 		ids[p.ID] = true
@@ -194,12 +194,14 @@ func (s *Store) UpdateWorkflow(w Workflow, expected string) (Workflow, error) {
 				r = phaseRecord{ID: p.ID}
 			}
 			r.Name = p.Name
-			r.Mode = p.Mode
+			if !found {
+				r.Mode = "async" // Retained only for compatibility with existing databases.
+			}
 			r.Template = p.DocumentTemplate
 			r.Position = i
 			r.Active = true
 			if found {
-				if err := tx.Model(&phaseRecord{}).Where("number = ?", r.Number).Select("name", "mode", "template", "position", "active").Updates(&r).Error; err != nil {
+				if err := tx.Model(&phaseRecord{}).Where("number = ?", r.Number).Select("name", "template", "position", "active").Updates(&r).Error; err != nil {
 					return err
 				}
 			} else {

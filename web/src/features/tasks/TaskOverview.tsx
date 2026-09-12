@@ -97,8 +97,8 @@ export function TaskOverview({
           String(t.number) === search.replace(/^#/, "")) &&
         (!activity ||
           (activity === "working"
-            ? t.agentStatus === "working"
-            : !t.agentStatus)) &&
+            ? t.agentStatus === "working" || t.agents.some((a) => a.active)
+            : !t.agentStatus && !t.agents.some((a) => a.active))) &&
         (!status || t.status === status) &&
         (!priority || String(t.priority) === priority) &&
         (!phase || t.currentPhaseId === phase) &&
@@ -263,7 +263,7 @@ export function TaskOverview({
                     <span className={`priority p${t.priority}`}>
                       P{t.priority}
                     </span>
-                    {t.agentStatus && (
+                    {(t.agentStatus || t.agents.some((a) => a.active)) && (
                       <Bot size={14} aria-label="Agent working" />
                     )}
                   </div>

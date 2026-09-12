@@ -62,7 +62,7 @@ type phaseRecord struct {
 	Number   int    `gorm:"primaryKey;autoIncrement"`
 	ID       string `gorm:"not null;uniqueIndex"`
 	Name     string
-	Mode     string `gorm:"not null;check:mode IN ('interactive','async')"`
+	Mode     string `gorm:"not null;check:mode IN ('interactive','async')"` // Legacy storage compatibility.
 	Template string
 	Position int
 	Active   bool
@@ -92,6 +92,29 @@ type phaseLinkRecord struct {
 }
 
 func (phaseLinkRecord) TableName() string { return "phase_links" }
+
+type agentSessionRecord struct {
+	TaskID         string `gorm:"primaryKey"`
+	SessionID      string `gorm:"primaryKey"`
+	Name           string `gorm:"not null"`
+	Scope          string
+	PhaseID        string
+	SubphaseNumber int
+	Status         string `gorm:"not null"`
+	LastSeen       time.Time
+}
+
+func (agentSessionRecord) TableName() string { return "agent_sessions" }
+
+type agentUpdateRecord struct {
+	Number    int    `gorm:"primaryKey;autoIncrement"`
+	TaskID    string `gorm:"not null;index"`
+	SessionID string `gorm:"not null;index"`
+	Body      string `gorm:"not null"`
+	CreatedAt time.Time
+}
+
+func (agentUpdateRecord) TableName() string { return "agent_updates" }
 
 type workflowRecord struct {
 	ID       int `gorm:"primaryKey;autoIncrement:false"`
@@ -132,7 +155,7 @@ func (s *Store) openDatabase() error {
 			return err
 		}
 	}
-	if err = db.AutoMigrate(&migrationRecord{}, &taskRecord{}, &documentRecord{}, &taskPhaseRecord{}, &phaseRecord{}, &workflowRecord{}, &historyRecord{}, &subphaseRecord{}, &phaseLinkRecord{}); err != nil {
+	if err = db.AutoMigrate(&migrationRecord{}, &taskRecord{}, &documentRecord{}, &taskPhaseRecord{}, &phaseRecord{}, &workflowRecord{}, &historyRecord{}, &subphaseRecord{}, &phaseLinkRecord{}, &agentSessionRecord{}, &agentUpdateRecord{}); err != nil {
 		pool.Close()
 		return err
 	}
@@ -190,7 +213,7 @@ func (s *Store) importJSON() error {
 			return err
 		}
 		for i, p := range w.Phases {
-			r := phaseRecord{Number: p.Number, ID: p.ID, Name: p.Name, Mode: p.Mode, Template: p.DocumentTemplate, Position: i, Active: true}
+			r := phaseRecord{Number: p.Number, ID: p.ID, Name: p.Name, Mode: "async", Template: p.DocumentTemplate, Position: i, Active: true}
 			if err := tx.Create(&r).Error; err != nil {
 				return err
 			}
@@ -320,6 +343,21 @@ func (s *Store) loadTask(id string) (Task, error) {
 	}
 	for _, l := range r.Links {
 		t.Links = append(t.Links, PhaseLink{Number: l.Number, PhaseID: l.PhaseID, URL: l.URL, Title: l.Title})
+	}
+	var agents []agentSessionRecord
+	if err := s.db.Where("task_id = ?", id).Order("last_seen desc").Find(&agents).Error; err != nil {
+		return Task{}, err
+	}
+	cutoff := time.Now().UTC().Add(-24 * time.Hour)
+	for _, a := range agents {
+		t.Agents = append(t.Agents, AgentSession{SessionID: a.SessionID, Name: a.Name, Scope: a.Scope, PhaseID: a.PhaseID, SubphaseNumber: a.SubphaseNumber, Status: a.Status, LastSeen: a.LastSeen, Active: a.Status != "done" && a.LastSeen.After(cutoff)})
+	}
+	var updates []agentUpdateRecord
+	if err := s.db.Where("task_id = ?", id).Order("number desc").Limit(50).Find(&updates).Error; err != nil {
+		return Task{}, err
+	}
+	for _, u := range updates {
+		t.AgentUpdates = append(t.AgentUpdates, AgentUpdateEntry{Number: u.Number, SessionID: u.SessionID, Body: u.Body, CreatedAt: u.CreatedAt})
 	}
 	return t, nil
 }

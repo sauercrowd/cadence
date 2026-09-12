@@ -10,7 +10,6 @@ const workflowSchema = z
       id: z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/),
       number: z.number().int().nonnegative(),
       name: z.string().trim().min(1).max(120),
-      mode: z.enum(["interactive", "async"]),
       documentTemplate: z.string(),
     }),
   )
@@ -113,8 +112,8 @@ export function WorkflowSettings({
       </header>
       <p className="settings-note">
         Changes apply immediately to every task. Renaming, reordering, or
-        editing a phase updates it everywhere it's used; removing a phase
-        keeps its document as a supporting document on affected tasks.
+        editing a phase updates it everywhere it's used; removing a phase keeps
+        its document as a supporting document on affected tasks.
       </p>
       <div className="workflow-layout">
         <nav className="workflow-phase-list" aria-label="Workflow phases">
@@ -137,7 +136,6 @@ export function WorkflowSettings({
                 id: crypto.randomUUID(),
                 number: 0,
                 name: "New phase",
-                mode: "interactive",
                 documentTemplate: "",
               };
               setPhases((current) => [...current, p]);
@@ -185,7 +183,7 @@ export function WorkflowSettings({
                 <Trash2 size={14} />
               </button>
             </div>
-            <div className="phase-title-mode">
+            <div className="phase-title">
               <label>
                 Title
                 <input
@@ -193,16 +191,6 @@ export function WorkflowSettings({
                   value={phase.name}
                   onChange={(event) => update({ name: event.target.value })}
                 />
-              </label>
-              <label>
-                Mode
-                <select
-                  value={phase.mode}
-                  onChange={(event) => update({ mode: event.target.value })}
-                >
-                  <option value="interactive">Interactive</option>
-                  <option value="async">Async</option>
-                </select>
               </label>
             </div>
             <label>

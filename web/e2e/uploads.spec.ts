@@ -73,12 +73,10 @@ for (const destination of ["caret", "source", "document"] as const) {
       await page.keyboard.press("Control+End");
       await page.keyboard.insertText(" edited");
     } else {
-      await page
-        .getByRole("button", { name: "Implementation planning", exact: true })
-        .click();
+      await page.getByRole("button", { name: /^Work/ }).click();
       await expect(
         page.getByRole("heading", {
-          name: "Implementation planning",
+          name: "Work",
           exact: true,
         }),
       ).toBeVisible();

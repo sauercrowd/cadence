@@ -14,7 +14,11 @@ import {
 } from "lucide-react";
 import { api, type Task, type Status } from "./data/api";
 import { useRoute, navigate } from "./app/router";
-import { TaskOverview, statusLabels, StatusIcon } from "./features/tasks/TaskOverview";
+import {
+  TaskOverview,
+  statusLabels,
+  StatusIcon,
+} from "./features/tasks/TaskOverview";
 import { TaskWorkspace } from "./features/workspace/TaskWorkspace";
 import { WorkflowSettings } from "./features/workflows/WorkflowSettings";
 import { Modal } from "./ui/Modal";
@@ -22,14 +26,20 @@ import { KeyHint, useHintMode, useShortcut } from "./app/keys";
 import { ShortcutSheet } from "./features/shortcuts/ShortcutSheet";
 import { PropertyPopup, flattenFields } from "./ui/PropertyMenu";
 import { priorityField, statusField } from "./features/tasks/propertyFields";
+import { AgentStatus } from "./features/agents/AgentStatus";
+import { AgentActivityPage } from "./features/agents/AgentActivityPage";
+import { AgentSwitcher } from "./features/agents/AgentSwitcher";
 
 const newTaskOptions = flattenFields([priorityField, statusField]);
 import { TaskSwitcher } from "./features/tasks/TaskSwitcher";
 import { hasUnsavedDocuments } from "./documents/session";
 export default function App() {
   const route = useRoute();
-  const [workspace, setWorkspace] =
-    useState<{ id: string; name: string; logoPath: string }>(),
+  const [workspace, setWorkspace] = useState<{
+      id: string;
+      name: string;
+      logoPath: string;
+    }>(),
     [logoBroken, setLogoBroken] = useState(false),
     [tasks, setTasks] = useState<Task[]>([]),
     [loading, setLoading] = useState(true),
@@ -37,6 +47,7 @@ export default function App() {
     [warnings, setWarnings] = useState<string[]>([]),
     [creating, setCreating] = useState(false),
     [switching, setSwitching] = useState(false),
+    [switchingAgent, setSwitchingAgent] = useState(false),
     [name, setName] = useState(""),
     [priority, setPriority] = useState(2),
     [status, setStatus] = useState<Status>("open"),
@@ -96,6 +107,7 @@ export default function App() {
   }, []);
   useHintMode();
   useShortcut("go-to-task", () => setSwitching(true));
+  useShortcut("go-to-agent", () => setSwitchingAgent(true));
   useShortcut("tasks", () => navigate(lastOverview.current));
   useShortcut("phases", () => navigate("/settings/workflow"));
   useShortcut("shortcuts", () => setSheet(true));
@@ -115,7 +127,9 @@ export default function App() {
     [],
   );
   const match = /^\/tasks\/([^/]+)\/documents\/([^/]+)$/.exec(route.pathname),
-    task = match ? tasks.find((t) => t.id === match[1]) : undefined;
+    agentMatch = /^\/tasks\/([^/]+)\/agents\/([^/]+)$/.exec(route.pathname),
+    taskId = match?.[1] || agentMatch?.[1],
+    task = taskId ? tasks.find((t) => t.id === taskId) : undefined;
   const openTask = (task: Task) => {
     const phase = task.phases.find(
       (p) => p.definition.id === task.currentPhaseId,
@@ -130,19 +144,25 @@ export default function App() {
     setCreating(true);
   };
   return (
-    <div className="app-shell" onKeyDownCapture={(event) => {
-      if (event.key !== "Escape" || event.nativeEvent.isComposing) return;
-      const target = event.target as HTMLElement;
-      // Popups own their first Escape; the next one leaves their input.
-      if (target.closest(".property-menu")) return;
-      const active = document.activeElement;
-      if (active instanceof HTMLElement &&
-          (active.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName))) {
-        event.preventDefault();
-        event.stopPropagation();
-        active.blur();
-      }
-    }}>
+    <div
+      className="app-shell"
+      onKeyDownCapture={(event) => {
+        if (event.key !== "Escape" || event.nativeEvent.isComposing) return;
+        const target = event.target as HTMLElement;
+        // Popups and dialogs own Escape before the page-level blur behavior.
+        if (target.closest(".property-menu, dialog")) return;
+        const active = document.activeElement;
+        if (
+          active instanceof HTMLElement &&
+          (active.isContentEditable ||
+            ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName))
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+          active.blur();
+        }
+      }}
+    >
       <aside className="app-sidebar">
         <div className="workspace-label" title={workspace?.name}>
           {workspace?.logoPath && !logoBroken ? (
@@ -200,7 +220,8 @@ export default function App() {
                 className={task?.id === t.id ? "active" : ""}
                 onClick={() => openTask(t)}
               >
-                {t.agentStatus === "working" ? (
+                {t.agentStatus === "working" ||
+                t.agents.some((a) => a.active) ? (
                   <Bot size={15} aria-label="Agent working" />
                 ) : (
                   <CircleDot size={15} />
@@ -213,6 +234,30 @@ export default function App() {
             <p className="focus-empty">Tasks in Focus appear here.</p>
           )}
         </nav>
+        {tasks.some((t) => t.agents.some((agent) => agent.active)) && (
+          <>
+            <div className="sidebar-label agents-sidebar-label">AGENTS</div>
+            <nav aria-label="Active agents" className="workspace-agents">
+              {tasks.flatMap((t) =>
+                t.agents
+                  .filter((agent) => agent.active)
+                  .map((agent) => (
+                    <button
+                      key={`${t.id}/${agent.sessionId}`}
+                      title={`${agent.name} · ${t.title}`}
+                      onClick={() =>
+                        navigate(`/tasks/${t.id}/agents/${agent.sessionId}`)
+                      }
+                    >
+                      <AgentStatus status={agent.status} iconOnly />
+                      <span className="workspace-agent-name">{agent.name}</span>
+                      <span className="task-code">#{t.number}</span>
+                    </button>
+                  )),
+              )}
+            </nav>
+          </>
+        )}
         <button
           className="sidebar-keys"
           title="Hold Alt to show shortcut keys"
@@ -248,6 +293,12 @@ export default function App() {
             <LoaderCircle className="working-spin" size={20} />
             Opening workspace…
           </div>
+        ) : agentMatch && task ? (
+          <AgentActivityPage
+            task={task}
+            sessionId={agentMatch[2]}
+            onBack={() => openTask(task)}
+          />
         ) : match && task && workspace ? (
           <TaskWorkspace
             task={task}
@@ -257,7 +308,7 @@ export default function App() {
             onError={onError}
             onBack={() => navigate(lastOverview.current)}
           />
-        ) : match ? (
+        ) : match || agentMatch ? (
           <div className="empty-state">
             <h2>Task unavailable</h2>
             <button className="button" onClick={() => navigate("/tasks")}>
@@ -281,6 +332,15 @@ export default function App() {
           tasks={tasks}
           onOpen={openTask}
           onClose={() => setSwitching(false)}
+        />
+      )}
+      {switchingAgent && (
+        <AgentSwitcher
+          tasks={tasks}
+          onOpen={(task, sessionId) =>
+            navigate(`/tasks/${task.id}/agents/${sessionId}`)
+          }
+          onClose={() => setSwitchingAgent(false)}
         />
       )}
       {creating && (

@@ -25,10 +25,28 @@ export type PhaseLink = {
   url: string;
   title: string;
 };
+export type AgentSession = {
+  sessionId: string;
+  name: string;
+  scope: string;
+  phaseId: string;
+  subphaseNumber: number;
+  status: string;
+  lastSeen: number;
+  active: boolean;
+};
+export type AgentUpdate = {
+  number: number;
+  sessionId: string;
+  body: string;
+  createdAt: number;
+};
 export type Task = {
   number: number;
   subphases: Subphase[];
   links: PhaseLink[];
+  agents: AgentSession[];
+  agentUpdates: AgentUpdate[];
   id: string;
   title: string;
   status: Status;
@@ -52,6 +70,22 @@ function task(t: ProtoTask): Task {
     number: t.number,
     subphases: t.subphases,
     links: t.links,
+    agents: t.agents.map((a) => ({
+      sessionId: a.sessionId,
+      name: a.name,
+      scope: a.scope,
+      phaseId: a.phaseId,
+      subphaseNumber: a.subphaseNumber,
+      status: a.status,
+      lastSeen: Number(a.lastSeen?.seconds || 0) * 1000,
+      active: a.active,
+    })),
+    agentUpdates: t.agentUpdates.map((u) => ({
+      number: u.number,
+      sessionId: u.sessionId,
+      body: u.body,
+      createdAt: Number(u.createdAt?.seconds || 0) * 1000,
+    })),
     id: t.id,
     title: t.name,
     status:
@@ -74,6 +108,18 @@ function task(t: ProtoTask): Task {
   };
 }
 export const api = {
+  upsertAgent: async (
+    taskId: string,
+    agent: {
+      sessionId: string;
+      name: string;
+      scope?: string;
+      phaseId?: string;
+      subphaseNumber?: number;
+      status?: string;
+      update?: string;
+    },
+  ) => task(await workspaceClient.upsertAgentSession({ taskId, ...agent })),
   createSubphase: async (t: Task, phaseId: string, name: string) =>
     task(
       await workspaceClient.createSubphase({

@@ -3,15 +3,15 @@ import { useEffect, useState, useSyncExternalStore, useRef } from "react";
 import {
   ArrowUpRight,
   Check,
-  Circle,
   Clock,
   FileText,
   LoaderCircle,
-  Bot,
   Plus,
   RefreshCw,
   RotateCcw,
   AlertCircle,
+  ChevronRight,
+  Users,
 } from "lucide-react";
 import { api, type Task, type Status } from "../../data/api";
 import { documentSession } from "../../documents/session";
@@ -20,8 +20,93 @@ import { DocumentEditor } from "../editor/DocumentEditor";
 import { statusLabels, StatusIcon } from "../tasks/TaskOverview";
 import { Modal } from "../../ui/Modal";
 import { navigate } from "../../app/router";
-import { KeyHint, useShortcut, useShortcutKey } from "../../app/keys";
+import {
+  KeyHint,
+  usePrefixedNumberShortcut,
+  useShortcut,
+  useShortcutKey,
+} from "../../app/keys";
 import { PhaseHeaderLinks, PhaseLinkPicker } from "./PhaseLinks";
+import { AgentStatus } from "../agents/AgentStatus";
+
+function InlineSubphase({
+  task,
+  subphase,
+  workspaceId,
+  onTask,
+  onError,
+}: {
+  task: Task;
+  subphase: Task["subphases"][number];
+  workspaceId: string;
+  onTask: (task: Task) => void;
+  onError: (error: unknown) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const session = documentSession(workspaceId, task.id, subphase.documentId);
+  const state = useSyncExternalStore(session.subscribe, session.snapshot);
+  useEffect(() => {
+    if (!open) return;
+    void session.load();
+    const timer = setInterval(() => void session.refresh(), 5000);
+    return () => {
+      clearInterval(timer);
+      void session.flush();
+    };
+  }, [open, session]);
+  useEffect(() => {
+    if (open && state.status === "saved")
+      void api.task(task.id).then(onTask).catch(onError);
+  }, [open, session, state.status, state.revision]);
+  return (
+    <details
+      className="inline-subphase"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary>
+        <ChevronRight size={13} />
+        <span className="task-code">S{subphase.number}</span>
+        <input
+          type="checkbox"
+          checked={subphase.done}
+          aria-label={`Complete ${subphase.name}`}
+          onClick={(event) => event.stopPropagation()}
+          onChange={(event) => {
+            const done = event.target.checked;
+            void session
+              .flush()
+              .then(() => api.task(task.id))
+              .then((fresh) => api.updateSubphase(fresh, subphase.number, done))
+              .then(onTask)
+              .catch(onError);
+          }}
+        />
+        <span className="inline-subphase-name">{subphase.name}</span>
+      </summary>
+      {open && state.revision && (
+        <div className="inline-subphase-document">
+          <DocumentEditor
+            cacheKey={session.key}
+            key={`${session.key}/${state.generation}`}
+            content={state.content}
+            showInstructions={false}
+            showModes={false}
+            taskId={task.id}
+            onChange={(content) => session.edit(content)}
+            onUploadComplete={(marker, markdown) =>
+              session.completeUpload(marker, markdown)
+            }
+            onError={onError}
+          />
+        </div>
+      )}
+      {open && state.status === "loading" && (
+        <div className="loading-state">Opening…</div>
+      )}
+    </details>
+  );
+}
 
 export function TaskWorkspace({
   task,
@@ -53,8 +138,11 @@ export function TaskWorkspace({
   const scroll = useRef<HTMLDivElement>(null);
   useEffect(() => {
     void session.load();
-    const timer = setInterval(() => void session.refresh(), 5000);
-    const refresh = () => void session.refresh();
+    const refresh = () => {
+      void session.refresh();
+      void api.task(task.id).then(onTask).catch(onError);
+    };
+    const timer = setInterval(refresh, 5000);
     window.addEventListener("focus", refresh);
     return () => {
       clearInterval(timer);
@@ -117,10 +205,33 @@ export function TaskWorkspace({
     const next = order[(at + delta + order.length) % order.length];
     if (next) changeDocument(next);
   };
-  useShortcutKey("jump-number", (key) => {
-    const phase = task.phases.find((p) => p.definition.number === Number(key));
-    if (phase) changeDocument(phase.documentId);
-  });
+  useShortcutKey(
+    "jump-number",
+    (key) => {
+      const phase = task.phases.find(
+        (p) => p.definition.number === Number(key),
+      );
+      if (phase) changeDocument(phase.documentId);
+    },
+    true,
+    (prefix) =>
+      task.phases.some((p) => {
+        const number = String(p.definition.number);
+        return number.startsWith(prefix) && number.length > prefix.length;
+      }),
+  );
+  usePrefixedNumberShortcut(
+    "jump-subphase",
+    (key) => {
+      const subphase = task.subphases.find((s) => s.number === Number(key));
+      if (subphase) changeDocument(subphase.documentId);
+    },
+    (prefix) =>
+      task.subphases.some((s) => {
+        const number = String(s.number);
+        return number.startsWith(prefix) && number.length > prefix.length;
+      }),
+  );
   // Links belong to a phase, and a subphase document counts as being on it.
   const activePhaseId =
     phase?.definition.id ??
@@ -216,21 +327,6 @@ export function TaskWorkspace({
                       onClick={() => changeDocument(p.documentId)}
                     >
                       <span>{p.definition.name}</span>
-                      {p.definition.mode === "async" && (
-                        <Bot size={13} aria-label="Async phase" />
-                      )}
-                    </button>
-                    <button
-                      className="icon-button"
-                      aria-label={`Add subphase to ${p.definition.name}`}
-                      disabled={busy}
-                      onClick={() => {
-                        setParentPhase(p.definition.id);
-                        setName("");
-                        setDialog("subphase");
-                      }}
-                    >
-                      <Plus size={12} />
                     </button>
                   </div>
                   {subphasesOf(p.definition.id).map((s) => (
@@ -271,6 +367,26 @@ export function TaskWorkspace({
               );
             })}
           </div>
+          {task.agents.some((agent) => agent.active) && (
+            <>
+              <div className="section-label agents-label">ACTIVE AGENTS</div>
+              {task.agents
+                .filter((agent) => agent.active)
+                .map((agent) => (
+                  <button
+                    className="agent-nav-item"
+                    key={agent.sessionId}
+                    title={agent.scope}
+                    onClick={() =>
+                      navigate(`/tasks/${task.id}/agents/${agent.sessionId}`)
+                    }
+                  >
+                    <AgentStatus status={agent.status} iconOnly />
+                    <span className="agent-name">{agent.name}</span>
+                  </button>
+                ))}
+            </>
+          )}
           <div className="section-label documents-label">
             DOCUMENTS
             <button
@@ -294,16 +410,6 @@ export function TaskWorkspace({
               {d.name}
             </button>
           ))}
-          <button
-            className="document-nav-item muted"
-            onClick={() => {
-              setName("");
-              setDialog("document");
-            }}
-          >
-            <Plus size={14} />
-            Add document
-          </button>
         </aside>
         <section className="phase-workspace">
           <header className="phase-header">
@@ -312,9 +418,6 @@ export function TaskWorkspace({
                 <span className="task-code">#{phase.definition.number}</span>
               )}
               <h2>{phase?.definition.name || doc.name}</h2>
-              {phase?.definition.mode === "async" && (
-                <Bot size={14} aria-label="Async phase" />
-              )}
               {activePhaseId && (
                 <PhaseHeaderLinks
                   links={links}
@@ -423,6 +526,35 @@ export function TaskWorkspace({
                 </button>
               </div>
             )}
+            {phase && (
+              <section className="inline-subphases">
+                <div className="section-label subphases-label">
+                  SUBPHASES
+                  <button
+                    className="icon-button"
+                    aria-label={`Add subphase to ${phase.definition.name}`}
+                    disabled={busy}
+                    onClick={() => {
+                      setParentPhase(phase.definition.id);
+                      setName("");
+                      setDialog("subphase");
+                    }}
+                  >
+                    <Plus size={13} />
+                  </button>
+                </div>
+                {subphasesOf(phase.definition.id).map((subphase) => (
+                  <InlineSubphase
+                    key={subphase.number}
+                    task={task}
+                    subphase={subphase}
+                    workspaceId={workspaceId}
+                    onTask={onTask}
+                    onError={onError}
+                  />
+                ))}
+              </section>
+            )}
           </div>
         </section>
       </div>
@@ -442,9 +574,10 @@ export function TaskWorkspace({
                   name.trim(),
                 );
                 onTask(updated);
-                changeDocument(
-                  updated.subphases[updated.subphases.length - 1].documentId,
+                const parent = updated.phases.find(
+                  (phase) => phase.definition.id === parentPhase,
                 );
+                if (parent) changeDocument(parent.documentId);
               });
             }}
           >

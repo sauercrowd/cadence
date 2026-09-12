@@ -67,6 +67,11 @@ describe("Lexical Markdown adapter", () => {
     expect(one.output).toContain("[x] Ready");
     expect(one.output).toContain('const value = "😀";');
   });
+  it("round-trips agent suggestion fences with their author", () => {
+    const source =
+      "```suggestion-Codex\nShow status before the agent name.\n```";
+    expect(convert(source).output).toBe(source);
+  });
   it("preserves tables and alignment", () => {
     const one = convert(
       "| Name | Mode |\n| :--- | ---: |\n| **Plan** | Async |",

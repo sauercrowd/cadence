@@ -16,6 +16,7 @@ export type Shortcut = {
 export const SHORTCUTS: Shortcut[] = [
   { id: "new-task", keys: ["c"], label: "New task", scope: "Global" },
   { id: "go-to-task", keys: ["g"], label: "Go to task", scope: "Global" },
+  { id: "go-to-agent", keys: ["a"], label: "Go to agent", scope: "Global" },
   { id: "tasks", keys: ["t"], label: "Tasks", scope: "Global" },
   { id: "phases", keys: ["p"], label: "Phases", scope: "Global" },
   { id: "filter", keys: ["/"], label: "Search and filter", scope: "Global" },
@@ -72,6 +73,13 @@ export const SHORTCUTS: Shortcut[] = [
   },
   { id: "doc-prev", keys: ["["], label: "Previous document", scope: "Task" },
   { id: "doc-next", keys: ["]"], label: "Next document", scope: "Task" },
+  {
+    id: "jump-subphase",
+    keys: ["s"],
+    label: "Type S + ID to jump to a subphase",
+    scope: "Task",
+    hint: "S#",
+  },
   {
     id: "make-current",
     keys: ["m"],
@@ -147,9 +155,12 @@ export function useShortcutKey(
   id: string,
   run: (key: string) => void,
   enabled = true,
+  hasLongerMatch?: (prefix: string) => boolean,
 ) {
   const latest = useRef(run);
+  const latestHasLongerMatch = useRef(hasLongerMatch);
   latest.current = run;
+  latestHasLongerMatch.current = hasLongerMatch;
   useEffect(() => {
     if (!enabled) return;
     const keys = shortcut(id).keys;
@@ -158,6 +169,7 @@ export function useShortcutKey(
     const onKey = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.metaKey || event.repeat || event.isComposing)
         return;
+      if (document.body.dataset.shortcutPrefix) return;
       if (!keys.includes(event.key)) {
         clearTimeout(timer);
         digits = "";
@@ -168,6 +180,14 @@ export function useShortcutKey(
       event.preventDefault();
       digits += event.key;
       clearTimeout(timer);
+      if (
+        latestHasLongerMatch.current &&
+        !latestHasLongerMatch.current(digits)
+      ) {
+        latest.current(digits);
+        digits = "";
+        return;
+      }
       timer = setTimeout(() => {
         latest.current(digits);
         digits = "";
@@ -177,6 +197,64 @@ export function useShortcutKey(
     return () => {
       clearTimeout(timer);
       document.removeEventListener("keydown", onKey);
+    };
+  }, [id, enabled]);
+}
+
+export function usePrefixedNumberShortcut(
+  id: string,
+  run: (number: string) => void,
+  hasLongerMatch: (prefix: string) => boolean,
+  enabled = true,
+) {
+  const latest = useRef(run);
+  const latestHasLongerMatch = useRef(hasLongerMatch);
+  latest.current = run;
+  latestHasLongerMatch.current = hasLongerMatch;
+  useEffect(() => {
+    if (!enabled) return;
+    const prefix = shortcut(id).keys[0].toLowerCase();
+    let digits = "";
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const reset = () => {
+      clearTimeout(timer);
+      digits = "";
+      delete document.body.dataset.shortcutPrefix;
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.repeat || event.isComposing)
+        return;
+      if (isTyping(event.target) || document.querySelector("dialog[open]"))
+        return;
+      if (!document.body.dataset.shortcutPrefix) {
+        if (event.key.toLowerCase() !== prefix) return;
+        event.preventDefault();
+        document.body.dataset.shortcutPrefix = id;
+        timer = setTimeout(reset, 1200);
+        return;
+      }
+      if (document.body.dataset.shortcutPrefix !== id) return;
+      if (!/^\d$/.test(event.key)) {
+        reset();
+        return;
+      }
+      event.preventDefault();
+      digits += event.key;
+      clearTimeout(timer);
+      if (!latestHasLongerMatch.current(digits)) {
+        latest.current(digits);
+        reset();
+        return;
+      }
+      timer = setTimeout(() => {
+        latest.current(digits);
+        reset();
+      }, 400);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      reset();
     };
   }, [id, enabled]);
 }

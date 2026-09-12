@@ -57,7 +57,7 @@ func TestJSONImportIsAtomicAndIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if imported.Number != 1 || len(imported.Documents) != 4 {
+	if imported.Number != 1 || len(imported.Documents) != 3 {
 		t.Fatalf("bad import: %+v", imported)
 	}
 	saved, err := s.RenameTask(id, "Changed in SQLite")
@@ -130,7 +130,7 @@ func TestNumbersAndSubphasesPersist(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	w.Phases = append(w.Phases, PhaseDefinition{ID: "extra", Name: "Extra", Mode: "async"})
+	w.Phases = append(w.Phases, PhaseDefinition{ID: "extra", Name: "Extra"})
 	w, err = s.UpdateWorkflow(w, w.Revision)
 	if err != nil {
 		t.Fatal(err)
@@ -142,7 +142,7 @@ func TestNumbersAndSubphasesPersist(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	first, err = s.CreateSubphase(first.ID, "implement", "Build storage", first.Revision)
+	first, err = s.CreateSubphase(first.ID, "work", "Build storage", first.Revision)
 	if err != nil {
 		t.Fatal(err)
 	}

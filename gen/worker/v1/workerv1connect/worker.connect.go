@@ -34,6 +34,9 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// WorkspaceServiceUpsertAgentSessionProcedure is the fully-qualified name of the WorkspaceService's
+	// UpsertAgentSession RPC.
+	WorkspaceServiceUpsertAgentSessionProcedure = "/worker.v1.WorkspaceService/UpsertAgentSession"
 	// WorkspaceServiceCreateSubphaseProcedure is the fully-qualified name of the WorkspaceService's
 	// CreateSubphase RPC.
 	WorkspaceServiceCreateSubphaseProcedure = "/worker.v1.WorkspaceService/CreateSubphase"
@@ -92,6 +95,7 @@ const (
 
 // WorkspaceServiceClient is a client for the worker.v1.WorkspaceService service.
 type WorkspaceServiceClient interface {
+	UpsertAgentSession(context.Context, *connect.Request[v1.UpsertAgentSessionRequest]) (*connect.Response[v1.Task], error)
 	CreateSubphase(context.Context, *connect.Request[v1.CreateSubphaseRequest]) (*connect.Response[v1.Task], error)
 	UpdateSubphase(context.Context, *connect.Request[v1.UpdateSubphaseRequest]) (*connect.Response[v1.Task], error)
 	CreatePhaseLink(context.Context, *connect.Request[v1.CreatePhaseLinkRequest]) (*connect.Response[v1.Task], error)
@@ -123,6 +127,12 @@ func NewWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, op
 	baseURL = strings.TrimRight(baseURL, "/")
 	workspaceServiceMethods := v1.File_worker_v1_worker_proto.Services().ByName("WorkspaceService").Methods()
 	return &workspaceServiceClient{
+		upsertAgentSession: connect.NewClient[v1.UpsertAgentSessionRequest, v1.Task](
+			httpClient,
+			baseURL+WorkspaceServiceUpsertAgentSessionProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("UpsertAgentSession")),
+			connect.WithClientOptions(opts...),
+		),
 		createSubphase: connect.NewClient[v1.CreateSubphaseRequest, v1.Task](
 			httpClient,
 			baseURL+WorkspaceServiceCreateSubphaseProcedure,
@@ -241,24 +251,30 @@ func NewWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, op
 
 // workspaceServiceClient implements WorkspaceServiceClient.
 type workspaceServiceClient struct {
-	createSubphase  *connect.Client[v1.CreateSubphaseRequest, v1.Task]
-	updateSubphase  *connect.Client[v1.UpdateSubphaseRequest, v1.Task]
-	createPhaseLink *connect.Client[v1.CreatePhaseLinkRequest, v1.Task]
-	deletePhaseLink *connect.Client[v1.DeletePhaseLinkRequest, v1.Task]
-	getWorkspace    *connect.Client[emptypb.Empty, v1.WorkspaceInfo]
-	getTask         *connect.Client[v1.TaskRequest, v1.Task]
-	updateTask      *connect.Client[v1.UpdateTaskRequest, v1.Task]
-	getWorkflow     *connect.Client[emptypb.Empty, v1.Workflow]
-	updateWorkflow  *connect.Client[v1.UpdateWorkflowRequest, v1.Workflow]
-	listTasks       *connect.Client[emptypb.Empty, v1.ListTasksResponse]
-	createTask      *connect.Client[v1.CreateTaskRequest, v1.Task]
-	renameTask      *connect.Client[v1.RenameTaskRequest, v1.Task]
-	deleteTask      *connect.Client[v1.TaskRequest, emptypb.Empty]
-	createDocument  *connect.Client[v1.CreateDocumentRequest, v1.Document]
-	getDocument     *connect.Client[v1.DocumentRequest, v1.Document]
-	renameDocument  *connect.Client[v1.RenameDocumentRequest, v1.Document]
-	updateDocument  *connect.Client[v1.UpdateDocumentRequest, v1.Document]
-	deleteDocument  *connect.Client[v1.DocumentRequest, emptypb.Empty]
+	upsertAgentSession *connect.Client[v1.UpsertAgentSessionRequest, v1.Task]
+	createSubphase     *connect.Client[v1.CreateSubphaseRequest, v1.Task]
+	updateSubphase     *connect.Client[v1.UpdateSubphaseRequest, v1.Task]
+	createPhaseLink    *connect.Client[v1.CreatePhaseLinkRequest, v1.Task]
+	deletePhaseLink    *connect.Client[v1.DeletePhaseLinkRequest, v1.Task]
+	getWorkspace       *connect.Client[emptypb.Empty, v1.WorkspaceInfo]
+	getTask            *connect.Client[v1.TaskRequest, v1.Task]
+	updateTask         *connect.Client[v1.UpdateTaskRequest, v1.Task]
+	getWorkflow        *connect.Client[emptypb.Empty, v1.Workflow]
+	updateWorkflow     *connect.Client[v1.UpdateWorkflowRequest, v1.Workflow]
+	listTasks          *connect.Client[emptypb.Empty, v1.ListTasksResponse]
+	createTask         *connect.Client[v1.CreateTaskRequest, v1.Task]
+	renameTask         *connect.Client[v1.RenameTaskRequest, v1.Task]
+	deleteTask         *connect.Client[v1.TaskRequest, emptypb.Empty]
+	createDocument     *connect.Client[v1.CreateDocumentRequest, v1.Document]
+	getDocument        *connect.Client[v1.DocumentRequest, v1.Document]
+	renameDocument     *connect.Client[v1.RenameDocumentRequest, v1.Document]
+	updateDocument     *connect.Client[v1.UpdateDocumentRequest, v1.Document]
+	deleteDocument     *connect.Client[v1.DocumentRequest, emptypb.Empty]
+}
+
+// UpsertAgentSession calls worker.v1.WorkspaceService.UpsertAgentSession.
+func (c *workspaceServiceClient) UpsertAgentSession(ctx context.Context, req *connect.Request[v1.UpsertAgentSessionRequest]) (*connect.Response[v1.Task], error) {
+	return c.upsertAgentSession.CallUnary(ctx, req)
 }
 
 // CreateSubphase calls worker.v1.WorkspaceService.CreateSubphase.
@@ -353,6 +369,7 @@ func (c *workspaceServiceClient) DeleteDocument(ctx context.Context, req *connec
 
 // WorkspaceServiceHandler is an implementation of the worker.v1.WorkspaceService service.
 type WorkspaceServiceHandler interface {
+	UpsertAgentSession(context.Context, *connect.Request[v1.UpsertAgentSessionRequest]) (*connect.Response[v1.Task], error)
 	CreateSubphase(context.Context, *connect.Request[v1.CreateSubphaseRequest]) (*connect.Response[v1.Task], error)
 	UpdateSubphase(context.Context, *connect.Request[v1.UpdateSubphaseRequest]) (*connect.Response[v1.Task], error)
 	CreatePhaseLink(context.Context, *connect.Request[v1.CreatePhaseLinkRequest]) (*connect.Response[v1.Task], error)
@@ -380,6 +397,12 @@ type WorkspaceServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	workspaceServiceMethods := v1.File_worker_v1_worker_proto.Services().ByName("WorkspaceService").Methods()
+	workspaceServiceUpsertAgentSessionHandler := connect.NewUnaryHandler(
+		WorkspaceServiceUpsertAgentSessionProcedure,
+		svc.UpsertAgentSession,
+		connect.WithSchema(workspaceServiceMethods.ByName("UpsertAgentSession")),
+		connect.WithHandlerOptions(opts...),
+	)
 	workspaceServiceCreateSubphaseHandler := connect.NewUnaryHandler(
 		WorkspaceServiceCreateSubphaseProcedure,
 		svc.CreateSubphase,
@@ -495,6 +518,8 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 	)
 	return "/worker.v1.WorkspaceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case WorkspaceServiceUpsertAgentSessionProcedure:
+			workspaceServiceUpsertAgentSessionHandler.ServeHTTP(w, r)
 		case WorkspaceServiceCreateSubphaseProcedure:
 			workspaceServiceCreateSubphaseHandler.ServeHTTP(w, r)
 		case WorkspaceServiceUpdateSubphaseProcedure:
@@ -539,6 +564,10 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 
 // UnimplementedWorkspaceServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedWorkspaceServiceHandler struct{}
+
+func (UnimplementedWorkspaceServiceHandler) UpsertAgentSession(context.Context, *connect.Request[v1.UpsertAgentSessionRequest]) (*connect.Response[v1.Task], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("worker.v1.WorkspaceService.UpsertAgentSession is not implemented"))
+}
 
 func (UnimplementedWorkspaceServiceHandler) CreateSubphase(context.Context, *connect.Request[v1.CreateSubphaseRequest]) (*connect.Response[v1.Task], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("worker.v1.WorkspaceService.CreateSubphase is not implemented"))

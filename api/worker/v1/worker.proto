@@ -30,6 +30,20 @@ message Task {
   int32 number = 13;
   repeated Subphase subphases = 14;
   repeated PhaseLink links = 15;
+  repeated AgentSession agents = 16;
+  repeated AgentUpdate agent_updates = 17;
+}
+
+message AgentSession {
+  string session_id = 1; string name = 2; string scope = 3;
+  string phase_id = 4; int32 subphase_number = 5; string status = 6;
+  google.protobuf.Timestamp last_seen = 7; bool active = 8;
+}
+message AgentUpdate { int32 number = 1; string session_id = 2; string body = 3; google.protobuf.Timestamp created_at = 4; }
+message UpsertAgentSessionRequest {
+  string task_id = 1; string session_id = 2; string name = 3;
+  string scope = 4; string phase_id = 5; int32 subphase_number = 6;
+  string status = 7; string update = 8;
 }
 
 message Subphase { int32 number = 1; string phase_id = 2; string document_id = 3; string name = 4; bool done = 5; }
@@ -44,7 +58,7 @@ message DeletePhaseLinkRequest { string task_id = 1; int32 number = 2; string re
 
 enum TaskStatus { TASK_STATUS_UNSPECIFIED = 0; TASK_STATUS_OPEN = 1; TASK_STATUS_FOCUS = 2; TASK_STATUS_DONE = 3; TASK_STATUS_ARCHIVED = 4; }
 enum AgentStatus { AGENT_STATUS_NONE = 0; AGENT_STATUS_WORKING = 1; }
-message PhaseDefinition { string id = 1; string name = 2; reserved 3, 5, 7, 8; string mode = 4; string document_template = 6; int32 number = 9; }
+message PhaseDefinition { string id = 1; string name = 2; reserved 3, 4, 5, 7, 8; string document_template = 6; int32 number = 9; }
 message TaskPhase { PhaseDefinition definition = 1; string document_id = 2; reserved 3, 4, 5; }
 message Workflow { repeated PhaseDefinition phases = 1; string revision = 2; }
 message WorkspaceInfo { string id = 1; string name = 2; string logo_path = 3; }
@@ -102,6 +116,7 @@ message UpdateDocumentRequest {
 }
 
 service WorkspaceService {
+  rpc UpsertAgentSession(UpsertAgentSessionRequest) returns (Task) {}
   rpc CreateSubphase(CreateSubphaseRequest) returns (Task) {}
   rpc UpdateSubphase(UpdateSubphaseRequest) returns (Task) {}
   rpc CreatePhaseLink(CreatePhaseLinkRequest) returns (Task) {}

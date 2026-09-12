@@ -17,7 +17,7 @@ func TestTaskStateAndWorkflowSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if task.Status != "open" || task.Priority != 2 || task.AgentStatus != nil || len(task.Phases) != 4 {
+	if task.Status != "open" || task.Priority != 2 || task.AgentStatus != nil || len(task.Phases) != 3 {
 		t.Fatalf("unexpected defaults: %+v", task)
 	}
 	working := "working"
@@ -64,14 +64,14 @@ func TestPhasesFollowWorkflowChanges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(task.Phases) != 4 {
-		t.Fatalf("expected 4 phases: %+v", task.Phases)
+	if len(task.Phases) != 3 {
+		t.Fatalf("expected 3 phases: %+v", task.Phases)
 	}
 	original := task.Documents
 
 	w, _ := s.GetWorkflow()
 	removedID := w.Phases[0].ID
-	w.Phases = append(w.Phases[1:], PhaseDefinition{ID: "extra", Name: "Extra phase", Mode: "interactive", DocumentTemplate: "# Extra\n"})
+	w.Phases = append(w.Phases[1:], PhaseDefinition{ID: "extra", Name: "Extra phase", DocumentTemplate: "# Extra\n"})
 	if _, err := s.UpdateWorkflow(w, w.Revision); err != nil {
 		t.Fatal(err)
 	}
@@ -80,8 +80,8 @@ func TestPhasesFollowWorkflowChanges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(task.Phases) != 4 {
-		t.Fatalf("expected the task to keep 4 phases after sync: %+v", task.Phases)
+	if len(task.Phases) != 3 {
+		t.Fatalf("expected the task to keep 3 phases after sync: %+v", task.Phases)
 	}
 	for _, p := range task.Phases {
 		if p.PhaseID == removedID {

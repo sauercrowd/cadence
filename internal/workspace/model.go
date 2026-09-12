@@ -1,10 +1,11 @@
 package workspace
 
+import "time"
+
 type PhaseDefinition struct {
 	ID               string `json:"id"`
 	Number           int    `json:"number"`
 	Name             string `json:"name"`
-	Mode             string `json:"mode"`
 	DocumentTemplate string `json:"documentTemplate"`
 }
 
@@ -52,15 +53,32 @@ type TaskUpdate struct {
 	Fields         []string
 }
 
+type AgentSession struct {
+	SessionID      string
+	Name           string
+	Scope          string
+	PhaseID        string
+	SubphaseNumber int
+	Status         string
+	LastSeen       time.Time
+	Active         bool
+}
+
+type AgentUpdateEntry struct {
+	Number    int
+	SessionID string
+	Body      string
+	CreatedAt time.Time
+}
+
 func agentInstructionsBlock(instructions string) string {
 	return "<agent-instructions>\n" + instructions + "\n</agent-instructions>\n"
 }
 
 func defaultWorkflow() Workflow {
 	return Workflow{Phases: []PhaseDefinition{
-		{ID: "goal", Number: 1, Name: "Goal planning", Mode: "interactive", DocumentTemplate: "# Goal\n\n## Outcome\n\nWhat should this work achieve?\n\n## Scope\n\n## Acceptance criteria\n\n## Open questions\n\n" + agentInstructionsBlock("Work with me to define the outcome. Ask focused questions, make tradeoffs explicit, and refine this document into a coherent specification. Keep codebase implementation details for the next phase.")},
-		{ID: "plan", Number: 2, Name: "Implementation planning", Mode: "interactive", DocumentTemplate: "# Implementation plan\n\n## Approach\n\n## Changes\n\n## Steps\n\n## Verification\n\n## Tradeoffs\n\n" + agentInstructionsBlock("Research the codebase and propose where the work belongs. Identify components, data models, dependencies, and verification. Define a reviewable breakdown and any appropriate PR structure. Iterate with me before implementation.")},
-		{ID: "implement", Number: 3, Name: "Implementation", Mode: "async", DocumentTemplate: "# Implementation\n\n## Changes\n\n## Verification evidence\n\n## Review findings and resolution\n\n## Deviations and remaining questions\n\n## Links\n\n" + agentInstructionsBlock("Carry out the accepted implementation plan independently. Test the result, including browser checks where relevant. Review your changes for maintainability, performance, and security, resolve relevant findings, and repeat until ready for human review. Record deviations and outstanding decisions. Stop for an essential scope decision rather than silently changing the goal.")},
-		{ID: "finalize", Number: 4, Name: "Finalize work", Mode: "interactive", DocumentTemplate: "# Finalize work\n\n## Review and decisions\n\n## Completion\n\n## Reflection\n\n" + agentInstructionsBlock("Help me review the output. Explain consequential decisions and respond to feedback. Merge only when explicitly authorized and applicable. Summarize lessons and propose any changes to future workflow instructions for my acceptance.")},
+		{ID: "goal", Number: 1, Name: "Goal planning", DocumentTemplate: "# Goal\n\n## Outcome\n\nWhat should this work achieve?\n\n## Scope\n\n## Acceptance criteria\n\n## Open questions\n\n" + agentInstructionsBlock("Work with me to define the outcome. Ask focused questions, make tradeoffs explicit, and refine this document into a coherent specification. Keep codebase implementation details for the next phase.")},
+		{ID: "work", Number: 2, Name: "Work", DocumentTemplate: "# Work\n\n## Approach\n\n## Changes\n\n## Verification\n\n## Decisions\n\n" + agentInstructionsBlock("Plan and implement the agreed outcome. Keep this document current as the approach develops. Use subphases for independent or parallel work, register your session and scope, and publish concise progress updates. Test and review the result before handoff. Stop for an essential scope decision rather than silently changing the goal.")},
+		{ID: "finalize", Number: 3, Name: "Finalize work", DocumentTemplate: "# Finalize work\n\n## Review and decisions\n\n## Completion\n\n## Reflection\n\n" + agentInstructionsBlock("Help me review the output. Explain consequential decisions and respond to feedback. Merge only when explicitly authorized and applicable. Summarize lessons and propose any changes to future workflow instructions for my acceptance.")},
 	}}
 }

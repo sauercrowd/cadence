@@ -39,6 +39,7 @@
   --danger-soft: #fdf0ee;
   --warn: #96601a;
   --warn-soft: #fdf5e8;
+  --working: #25658a;
 
   /* --- geometry ------------------------------------------------------ */
   --r: 2px;
@@ -48,6 +49,7 @@
   --ctl-h: 22px;
   --ctl-pad: 3px 7px;
   --sidebar: 176px;
+  --agent-label: 64px;
   --gutter: 16px;
   --s1: 4px;
   --s2: 8px;
@@ -448,6 +450,20 @@ pre {
 .focused-tasks {
   min-height: 0;
   overflow-y: auto;
+}
+.agents-sidebar-label {
+  margin-top: var(--s4);
+}
+.workspace-agents {
+  min-height: 0;
+  overflow-y: auto;
+}
+.workspace-agent-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 /* The whole chain needs min-width:0 or the label escapes the sidebar. */
 .focused-task-title {
@@ -941,6 +957,7 @@ body[data-keys="on"] .task-row.cursor::after {
   padding: var(--s3) var(--s2);
   border-right: 1px solid var(--rule);
   overflow: auto;
+  scrollbar-gutter: stable;
 }
 .section-label {
   display: flex;
@@ -956,6 +973,10 @@ body[data-keys="on"] .task-row.cursor::after {
 }
 .documents-label {
   margin-top: var(--s4);
+}
+.subphases-label {
+  justify-content: flex-start;
+  gap: var(--s1);
 }
 .phase-timeline {
   display: flex;
@@ -1121,7 +1142,7 @@ body[data-keys="on"] .task-row.cursor::after {
 /* Numbered badge doubles as the "make current" control. */
 .phase-step {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   display: grid;
   place-items: center;
   width: 16px;
@@ -1192,6 +1213,7 @@ body[data-keys="on"] .task-row.cursor::after {
 .phase-group::after {
   content: "";
   position: absolute;
+  z-index: 1;
   left: 13.5px; /* 6px padding + half of the 16px badge */
   width: 1px;
   background: var(--rule);
@@ -1303,6 +1325,7 @@ body[data-keys="on"] .task-row.cursor::after {
   min-height: 0;
   padding: var(--s4) var(--gutter) 64px;
   overflow: auto;
+  scrollbar-gutter: stable;
 }
 /* Centered in the pane, with the floor of --gutter kept by the padding. */
 .document-editor {
@@ -1435,6 +1458,27 @@ body[data-keys="on"] .task-row.cursor::after {
   font-size: 12px;
   line-height: 1.65;
   white-space: pre-wrap;
+}
+.editor-code.agent-suggestion {
+  position: relative;
+  padding-top: calc(var(--s5) + var(--s1));
+  border-color: var(--structure);
+  background: var(--structure-soft);
+  font-family: var(--sans);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+.editor-code.agent-suggestion::before {
+  content: "AGENT SUGGESTION · " attr(data-agent);
+  position: absolute;
+  top: var(--s2);
+  left: var(--s3);
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--structure);
+  text-transform: uppercase;
 }
 /* Pasted images and iframe embeds render as framed blocks. The figure wrapper
    carries no browser margin; the caption only appears when the Markdown gives
@@ -1727,6 +1771,152 @@ body[data-keys="on"] .task-row.cursor::after {
 }
 .thread-overlay textarea:focus {
   border-color: var(--structure);
+}
+
+.agents-label {
+  margin-top: var(--s4);
+}
+.agent-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  width: 100%;
+  min-width: 0;
+  min-height: var(--ctl-h);
+  padding: var(--ctl-pad);
+  border-radius: var(--r);
+  color: var(--muted);
+  font-size: var(--fs-ui);
+  text-align: left;
+}
+.agent-nav-item:hover {
+  background: var(--hover);
+}
+.agent-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-status.icon-only > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.agent-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  line-height: 1;
+  white-space: nowrap;
+}
+.agent-status.working {
+  color: var(--working);
+}
+.agent-status.waiting {
+  color: var(--danger);
+}
+.agent-status.waiting svg circle {
+  fill: currentColor;
+}
+.agent-status.waiting svg path {
+  stroke: var(--surface);
+}
+.agent-status.waiting svg line {
+  stroke: var(--surface);
+}
+.agent-status.done {
+  color: var(--done);
+}
+.agent-status.unknown {
+  color: var(--muted);
+}
+.agent-detail dl {
+  margin: 0 0 var(--s4);
+}
+.agent-page {
+  height: 100%;
+  overflow: auto;
+}
+.agent-page .phase-header {
+  justify-content: flex-start;
+  gap: var(--s2);
+}
+.agent-page-content {
+  max-width: 720px;
+  padding: var(--s4) var(--gutter);
+}
+.agent-detail dl > div {
+  display: grid;
+  grid-template-columns: var(--agent-label) minmax(0, 1fr);
+  padding: var(--s1) 0;
+}
+.agent-detail dt {
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  color: var(--faint);
+  text-transform: uppercase;
+}
+.agent-detail dd {
+  margin: 0;
+}
+.agent-update {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s2) 0;
+  border-top: 1px solid var(--rule-soft);
+}
+.agent-update time {
+  flex-shrink: 0;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  color: var(--faint);
+}
+.inline-subphases {
+  margin-top: var(--s5);
+  padding-top: var(--s4);
+}
+.inline-subphase {
+  border-top: 1px solid var(--rule-soft);
+}
+.inline-subphase:last-child {
+  border-bottom: 1px solid var(--rule-soft);
+}
+.inline-subphase summary {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: var(--row);
+  padding: 0 var(--s2);
+  cursor: pointer;
+  list-style: none;
+}
+.inline-subphase summary::-webkit-details-marker {
+  display: none;
+}
+.inline-subphase[open] summary > svg:first-child {
+  transform: rotate(90deg);
+}
+.inline-subphase-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-subphase summary input {
+  margin: 0;
+  accent-color: var(--structure);
+}
+.inline-subphase-document {
+  padding: var(--s3) var(--s2) var(--s5);
+  border-top: 1px solid var(--rule-soft);
 }
 
 /* ==========================================================================
@@ -2177,10 +2367,8 @@ details > summary {
 .workflow-phase-details select:focus {
   border-color: var(--structure);
 }
-.phase-title-mode {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 132px;
-  gap: var(--s3);
+.phase-title {
+  display: block;
 }
 .field-hint {
   font-family: var(--sans);
@@ -2278,9 +2466,6 @@ details > summary {
     padding: 0 0 var(--s3);
     border-right: 0;
     border-bottom: 1px solid var(--rule);
-  }
-  .phase-title-mode {
-    grid-template-columns: minmax(0, 1fr);
   }
   .task-heading,
   .phase-header,

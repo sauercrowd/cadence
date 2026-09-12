@@ -41,10 +41,10 @@ func agentProto(s *string) v1.AgentStatus {
 	return v1.AgentStatus_AGENT_STATUS_NONE
 }
 func definitionProto(p workspace.PhaseDefinition) *v1.PhaseDefinition {
-	return &v1.PhaseDefinition{Id: p.ID, Number: int32(p.Number), Name: p.Name, Mode: p.Mode, DocumentTemplate: p.DocumentTemplate}
+	return &v1.PhaseDefinition{Id: p.ID, Number: int32(p.Number), Name: p.Name, DocumentTemplate: p.DocumentTemplate}
 }
 func definitionModel(p *v1.PhaseDefinition) workspace.PhaseDefinition {
-	return workspace.PhaseDefinition{ID: p.Id, Number: int(p.Number), Name: p.Name, Mode: p.Mode, DocumentTemplate: p.DocumentTemplate}
+	return workspace.PhaseDefinition{ID: p.Id, Number: int(p.Number), Name: p.Name, DocumentTemplate: p.DocumentTemplate}
 }
 func phasesProto(phases []workspace.TaskPhase) []*v1.TaskPhase {
 	result := []*v1.TaskPhase{}

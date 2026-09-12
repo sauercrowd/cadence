@@ -56,6 +56,15 @@ func (h *Handler) DeleteTask(_ context.Context, request *connect.Request[workerv
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
+func (h *Handler) UpsertAgentSession(_ context.Context, request *connect.Request[workerv1.UpsertAgentSessionRequest]) (*connect.Response[workerv1.Task], error) {
+	r := request.Msg
+	task, err := h.store.UpsertAgentSession(r.TaskId, workspace.AgentSession{SessionID: r.SessionId, Name: r.Name, Scope: r.Scope, PhaseID: r.PhaseId, SubphaseNumber: int(r.SubphaseNumber), Status: r.Status}, r.Update)
+	if err != nil {
+		return nil, rpcError(err)
+	}
+	return connect.NewResponse(taskToProto(task)), nil
+}
+
 func (h *Handler) CreateDocument(_ context.Context, request *connect.Request[workerv1.CreateDocumentRequest]) (*connect.Response[workerv1.Document], error) {
 	document, err := h.store.CreateDocument(request.Msg.TaskId, request.Msg.Name)
 	if err != nil {
@@ -112,6 +121,14 @@ func taskToProto(task workspace.Task) *workerv1.Task {
 			Filename: document.Filename,
 		})
 	}
+	agents := make([]*workerv1.AgentSession, 0, len(task.Agents))
+	for _, a := range task.Agents {
+		agents = append(agents, &workerv1.AgentSession{SessionId: a.SessionID, Name: a.Name, Scope: a.Scope, PhaseId: a.PhaseID, SubphaseNumber: int32(a.SubphaseNumber), Status: a.Status, LastSeen: timestamppb.New(a.LastSeen), Active: a.Active})
+	}
+	updates := make([]*workerv1.AgentUpdate, 0, len(task.AgentUpdates))
+	for _, u := range task.AgentUpdates {
+		updates = append(updates, &workerv1.AgentUpdate{Number: int32(u.Number), SessionId: u.SessionID, Body: u.Body, CreatedAt: timestamppb.New(u.CreatedAt)})
+	}
 	return &workerv1.Task{
 		Subphases: subphases,
 		Links:     links,
@@ -120,7 +137,7 @@ func taskToProto(task workspace.Task) *workerv1.Task {
 		Documents: documents,
 		CreatedAt: timestamppb.New(task.CreatedAt),
 		UpdatedAt: timestamppb.New(task.UpdatedAt),
-		Status:    statusProto(task.Status), Priority: int32(task.Priority), AgentStatus: agentProto(task.AgentStatus), CurrentPhaseId: task.CurrentPhaseID, Revision: task.Revision, Phases: phasesProto(task.Phases),
+		Status:    statusProto(task.Status), Priority: int32(task.Priority), AgentStatus: agentProto(task.AgentStatus), CurrentPhaseId: task.CurrentPhaseID, Revision: task.Revision, Phases: phasesProto(task.Phases), Agents: agents, AgentUpdates: updates,
 	}
 }
 

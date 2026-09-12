@@ -36,21 +36,23 @@ type DocumentSummary struct {
 }
 
 type Task struct {
-	Subphases      []Subphase        `json:"subphases,omitempty"`
-	Links          []PhaseLink       `json:"links,omitempty"`
-	SchemaVersion  int               `json:"schemaVersion"`
-	ID             string            `json:"id"`
-	Number         int               `json:"number"`
-	Name           string            `json:"name"`
-	Documents      []DocumentSummary `json:"documents"`
-	CreatedAt      time.Time         `json:"createdAt"`
-	UpdatedAt      time.Time         `json:"updatedAt"`
-	Status         string            `json:"status"`
-	Priority       int               `json:"priority"`
-	AgentStatus    *string           `json:"agentStatus"`
-	CurrentPhaseID string            `json:"currentPhaseId"`
-	Phases         []TaskPhase       `json:"phases"`
-	Revision       string            `json:"-"`
+	Subphases      []Subphase         `json:"subphases,omitempty"`
+	Links          []PhaseLink        `json:"links,omitempty"`
+	Agents         []AgentSession     `json:"-"`
+	AgentUpdates   []AgentUpdateEntry `json:"-"`
+	SchemaVersion  int                `json:"schemaVersion"`
+	ID             string             `json:"id"`
+	Number         int                `json:"number"`
+	Name           string             `json:"name"`
+	Documents      []DocumentSummary  `json:"documents"`
+	CreatedAt      time.Time          `json:"createdAt"`
+	UpdatedAt      time.Time          `json:"updatedAt"`
+	Status         string             `json:"status"`
+	Priority       int                `json:"priority"`
+	AgentStatus    *string            `json:"agentStatus"`
+	CurrentPhaseID string             `json:"currentPhaseId"`
+	Phases         []TaskPhase        `json:"phases"`
+	Revision       string             `json:"-"`
 }
 
 type Document struct {

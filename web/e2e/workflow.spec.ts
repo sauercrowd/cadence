@@ -57,9 +57,18 @@ test("tasks, comments, phase switching, and archiving", async ({ page }) => {
 
   // Comment on the goal document, then resolve and re-reveal the thread.
   await selectText(page, "should this work achieve");
-  await page
-    .getByRole("textbox", { name: "Comment reply" })
-    .fill("Should this cover archived tasks too?");
+  const reply = page.getByRole("textbox", { name: "Comment reply" });
+  const draftThread = page.getByRole("dialog", { name: "Comment thread" });
+  const topBeforeFocus = (await draftThread.boundingBox())?.y;
+  await reply.focus();
+  await expect(reply).toBeFocused();
+  await expect
+    .poll(async () => (await draftThread.boundingBox())?.y)
+    .toBe(topBeforeFocus);
+  await reply.fill("Should this cover archived tasks too?");
+  await expect
+    .poll(async () => (await draftThread.boundingBox())?.y)
+    .toBe(topBeforeFocus);
   await page.getByRole("button", { name: "Comment", exact: true }).click();
   const dot = page.getByRole("button", {
     name: "Comment: Should this cover archived tasks too?",
@@ -89,13 +98,11 @@ test("tasks, comments, phase switching, and archiving", async ({ page }) => {
     page.getByRole("textbox", { name: "Document body", exact: true }),
   ).not.toContainText("cadence-comments");
 
-  // Move to implementation planning and make it the current phase by
+  // Move to work and make it the current phase by
   // hovering/clicking its timeline number, which swaps to a clock icon.
-  await page
-    .getByRole("button", { name: "Implementation planning", exact: true })
-    .click();
+  await page.getByRole("button", { name: /^Work/ }).click();
   const makeCurrent = page.getByRole("button", {
-    name: "Make Implementation planning the current phase",
+    name: "Make Work the current phase",
   });
   await makeCurrent.hover();
   await expect(makeCurrent.locator(".phase-step-hover")).toHaveCSS(
@@ -105,7 +112,7 @@ test("tasks, comments, phase switching, and archiving", async ({ page }) => {
   await makeCurrent.click();
   await expect(
     page.getByRole("button", {
-      name: "Implementation planning: current phase",
+      name: "Work: current phase",
     }),
   ).toBeVisible();
 
@@ -114,4 +121,103 @@ test("tasks, comments, phase switching, and archiving", async ({ page }) => {
   await setTaskStatus(page, "focus");
 
   expect(errors).toEqual([]);
+});
+
+test("subphases stay with their phase and show active agents", async ({
+  page,
+}) => {
+  await createTask(page, "Parallel delivery");
+  await expect(page.getByRole("button", { name: "Add document" })).toHaveCount(
+    1,
+  );
+  await page
+    .getByRole("button", { name: "Add subphase to Goal planning" })
+    .click();
+  await page.getByRole("textbox", { name: "Subphase name" }).fill("Research");
+  await page.getByRole("button", { name: "Create subphase" }).click();
+  await page
+    .getByRole("button", { name: "Goal planning", exact: true })
+    .click();
+
+  const taskId = page.url().split("/tasks/")[1].split(/[/?#]/)[0];
+  const taskResponse = await page.request.post(
+    "/api/worker.v1.WorkspaceService/GetTask",
+    { data: { taskId } },
+  );
+  const task = await taskResponse.json();
+  await page.keyboard.press("s");
+  await page.keyboard.press(String(task.subphases[0].number));
+  await expect(
+    page.getByRole("heading", { name: "Research", exact: true, level: 2 }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Goal planning", exact: true })
+    .click();
+  await page.request.post(
+    "/api/worker.v1.WorkspaceService/UpsertAgentSession",
+    {
+      data: {
+        taskId: task.id,
+        sessionId: crypto.randomUUID(),
+        name: "Codex",
+        scope: "Research",
+        subphaseNumber: task.subphases[0].number,
+        status: "working",
+        update: "Started research",
+      },
+    },
+  );
+  await page.reload();
+
+  await expect(page.getByText("ACTIVE AGENTS", { exact: true })).toBeVisible();
+  await expect(
+    page
+      .locator(".workspace-agents")
+      .getByLabel("Agent status: working", { exact: true }),
+  ).toBeVisible();
+  await page.locator(".agent-nav-item", { hasText: "Codex" }).click();
+  await expect(page).toHaveURL(/\/agents\//);
+  const activity = page.locator(".agent-page");
+  await expect(activity.getByRole("heading", { name: "Codex" })).toBeVisible();
+  await expect(
+    activity.getByLabel("Agent status: working", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    activity.getByText("Started research", { exact: true }),
+  ).toBeVisible();
+  await activity.getByRole("button", { name: "Back to task" }).click();
+  await page.keyboard.press("a");
+  const switcher = page.getByRole("dialog", { name: "Go to agent" });
+  await expect(
+    switcher.getByRole("combobox", { name: "Find agent" }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/agents\//);
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(/\/documents\//);
+  const subphase = page.locator(".inline-subphase", { hasText: "Research" });
+  await expect(subphase).toBeVisible();
+  await subphase.locator("summary").click();
+  await expect(
+    subphase.getByRole("textbox", { name: "Document body" }),
+  ).toBeVisible();
+  const subphaseEditor = subphase.getByRole("textbox", {
+    name: "Document body",
+  });
+  await subphaseEditor.click();
+  await page.keyboard.press("ControlOrMeta+End");
+  await page.keyboard.type("\nInline note");
+  await expect(subphaseEditor).toContainText("Inline note");
+  await expect(subphase.getByRole("button", { name: "Spec" })).toHaveCount(0);
+  await expect(
+    subphase.getByRole("button", { name: "Agent instructions" }),
+  ).toHaveCount(0);
+  await expect(subphase.getByRole("button", { name: "Source" })).toHaveCount(0);
+  await page.setViewportSize({ width: 600, height: 800 });
+  await expect(subphase).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
 });

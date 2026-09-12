@@ -20,6 +20,15 @@ test("keyboard navigation across the app", async ({ page }, testInfo) => {
   await makeTask(page, "Investigate slow dashboard queries");
   await makeTask(page, "Rewrite onboarding copy");
 
+  // A switcher closes on the first Escape even while its search has focus.
+  await page.keyboard.press("g");
+  const taskSwitcher = page.getByRole("dialog", { name: "Go to task" });
+  await expect(
+    taskSwitcher.getByRole("combobox", { name: "Find task" }),
+  ).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(taskSwitcher).toBeHidden();
+
   // t returns to the list; j/k move the cursor; Enter opens.
   await page.keyboard.press("t");
   await expect(page.locator(".task-row").first()).toHaveClass(/cursor/);
@@ -43,10 +52,10 @@ test("keyboard navigation across the app", async ({ page }, testInfo) => {
     .waitFor();
 
   // Numbers address the numbered phases.
-  await page.keyboard.press("3");
+  await page.keyboard.press("2");
   await expect(
     page.getByRole("heading", {
-      name: "Implementation",
+      name: "Work",
       level: 2,
       exact: true,
     }),
@@ -59,12 +68,12 @@ test("keyboard navigation across the app", async ({ page }, testInfo) => {
   // ] steps through the navigator, m makes the viewed phase current.
   await page.keyboard.press("]");
   await expect(
-    page.getByRole("heading", { name: "Implementation planning" }),
+    page.getByRole("heading", { name: "Work", level: 2, exact: true }),
   ).toBeVisible();
   await page.keyboard.press("m");
   await expect(
     page.getByRole("button", {
-      name: "Implementation planning: current phase",
+      name: "Work: current phase",
     }),
   ).toBeVisible();
 
@@ -99,11 +108,11 @@ test("keyboard navigation across the app", async ({ page }, testInfo) => {
   await page.keyboard.press("Escape");
   await page.keyboard.press("p");
   await expect(page.getByRole("heading", { name: "Phases" })).toBeVisible();
-  const third = page
+  const work = page
     .getByRole("navigation", { name: "Workflow phases" })
-    .getByRole("button", { name: "3 Implementation", exact: true });
+    .getByRole("button", { name: "2 Work", exact: true });
   // The heading renders before the workflow loads; wait for the list itself.
-  await expect(third).toBeVisible();
-  await page.keyboard.press("3");
-  await expect(third).toHaveClass(/active/);
+  await expect(work).toBeVisible();
+  await page.keyboard.press("2");
+  await expect(work).toHaveClass(/active/);
 });

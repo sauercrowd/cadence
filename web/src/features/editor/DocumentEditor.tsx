@@ -52,7 +52,7 @@ import {
   $isLinkNode,
 } from "@lexical/link";
 import { TableExtension, INSERT_TABLE_COMMAND } from "@lexical/table";
-import { CodeNode, $createCodeNode } from "@lexical/code";
+import { CodeNode, $createCodeNode, $isCodeNode } from "@lexical/code";
 import {
   MarkExtension,
   $wrapSelectionInMarkNode,
@@ -111,6 +111,7 @@ type Props = {
   onUploadComplete?: (marker: string, markdown: string) => void;
   cacheKey?: string;
   showInstructions?: boolean;
+  showModes?: boolean;
   taskId?: string;
 };
 const editorCache = new Map<string, { content: string; state: EditorState }>();
@@ -146,6 +147,7 @@ export function DocumentEditor({
   onUploadComplete,
   cacheKey,
   showInstructions = true,
+  showModes = true,
   taskId = "",
 }: Props) {
   const parsed = useMemo(() => parseFile(content), []);
@@ -167,32 +169,34 @@ export function DocumentEditor({
   return (
     <EmbedTaskContext.Provider value={taskId}>
       <div className="document-editor">
-        <div className="editor-mode">
-          <div className="segmented">
-            <button
-              className={mode === "spec" ? "selected" : ""}
-              disabled={!!reason}
-              onClick={() => go("spec")}
-            >
-              Spec
-            </button>
-            {showInstructions && (
+        {showModes && (
+          <div className="editor-mode">
+            <div className="segmented">
               <button
-                className={mode === "instructions" ? "selected" : ""}
+                className={mode === "spec" ? "selected" : ""}
                 disabled={!!reason}
-                onClick={() => go("instructions")}
+                onClick={() => go("spec")}
               >
-                Agent instructions
+                Spec
               </button>
-            )}
-            <button
-              className={mode === "source" ? "selected" : ""}
-              onClick={() => go("source")}
-            >
-              Source
-            </button>
+              {showInstructions && (
+                <button
+                  className={mode === "instructions" ? "selected" : ""}
+                  disabled={!!reason}
+                  onClick={() => go("instructions")}
+                >
+                  Agent instructions
+                </button>
+              )}
+              <button
+                className={mode === "source" ? "selected" : ""}
+                onClick={() => go("source")}
+              >
+                Source
+              </button>
+            </div>
           </div>
-        </div>
+        )}
         {reason && <div className="notice">{reason}</div>}
         {mode === "source" ? (
           <SourceEditor
@@ -256,10 +260,11 @@ function RichEditor({
       nodes: [CodeNode, HorizontalRuleNode, EmbedNode],
       $initialEditorState:
         cached?.content === content
-          ? cached.state.clone()
+          ? cached.state.clone(null)
           : () => {
               $convertFromMarkdownString(initial.body, markdownTransformers);
               restoreMarks(initial.threads);
+              $setSelection(null);
             },
       onError: (error) => {
         throw error;
@@ -311,6 +316,7 @@ function EditorSurface({
   const [editor] = useLexicalComposerContext();
   const [threads, setThreads] = useState(initial.threads),
     [draft, setDraft] = useState<Thread | null>(null),
+    [draftTop, setDraftTop] = useState(0),
     [markers, setMarkers] = useState<
       { id: string; top: number; detached: boolean }[]
     >([]);
@@ -449,6 +455,30 @@ function EditorSurface({
       }),
     [editor, taskId],
   );
+  useEffect(
+    () =>
+      editor.registerMutationListener(CodeNode, (mutations) => {
+        editor.getEditorState().read(() => {
+          for (const [key, mutation] of mutations) {
+            if (mutation === "destroyed") continue;
+            const node = $getNodeByKey(key);
+            const element = editor.getElementByKey(key);
+            if (!$isCodeNode(node) || !element) continue;
+            const language = node.getLanguage() || "";
+            if (!language.startsWith("suggestion-")) {
+              element.classList.remove("agent-suggestion");
+              delete element.dataset.agent;
+              continue;
+            }
+            element.classList.add("agent-suggestion");
+            element.dataset.agent = language
+              .slice("suggestion-".length)
+              .replace(/-/g, " ");
+          }
+        });
+      }),
+    [editor],
+  );
 
   // Save a unique marker immediately. Completion replaces it at its original
   // location, either in this editor or in the owning document session.
@@ -583,6 +613,15 @@ function EditorSurface({
         );
       if (start === end) return;
       const now = new Date().toISOString();
+      const selectionBounds = selectionRect(root.current);
+      const editorBounds = root.current?.getBoundingClientRect();
+      setDraftTop(
+        Math.max(
+          0,
+          (selectionBounds?.top ?? editorBounds?.top ?? 0) -
+            (editorBounds?.top ?? 0),
+        ),
+      );
       setDraft({
         id: crypto.randomUUID(),
         status: "open",
@@ -816,13 +855,7 @@ function EditorSurface({
             <ThreadOverlay
               key={draft.id}
               thread={draft}
-              top={Math.max(
-                0,
-                (window.getSelection()?.rangeCount
-                  ? window.getSelection()!.getRangeAt(0).getBoundingClientRect()
-                      .top
-                  : 0) - (root.current?.getBoundingClientRect().top || 0),
-              )}
+              top={draftTop}
               initialOpen
               onReply={(value) => reply(draft, value)}
               onResolve={() => setDraft(null)}

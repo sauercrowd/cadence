@@ -4,7 +4,8 @@ A local workspace for shaping tasks, handing work to external agents, and review
 
 - Open, Focus, Done, and Archived task states; separate Working or unset agent activity.
 - Compact list and phase-board views with search and filters.
-- Four configurable phases and supporting documents. Click a phase's name to view it; hover its number for a clock icon and click to make it current. Earlier phases display as done. Documents remain editable, without approval controls. Tasks always reflect the current workflow: editing a phase's name, mode, or template applies live; removing a phase keeps its document as a supporting document.
+- Three default phases (Goal, Work, Finalize), configurable phases, and supporting documents. Click a phase's name to view it; hover its number for a clock icon and click to make it current. Earlier phases display as done. Documents remain editable, without approval controls. Tasks always reflect the current workflow: editing a phase's name or template applies live; removing a phase keeps its document as a supporting document.
+- Numbered subphases expand below their parent document and load on demand. Agent sessions publish scope, status, and progress at task or phase level so parallel work stays visible.
 - Each phase's instructions travel with its document as an `<agent-instructions>` section, not a separate hidden field — editable Markdown in its own tab (Spec / Agent instructions / Source), out of the way of the main document but never hidden, so what an agent was actually told is always inspectable and correctable.
 - Passage-anchored comment dots with floating reply/resolve threads.
 
