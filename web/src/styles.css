@@ -1546,6 +1546,11 @@ body[data-keys="on"] .task-row.cursor::after {
   padding-left: 3px;
   margin-bottom: 3px;
 }
+/* Lexical wraps a nested list in a structural list item. It must not draw a
+   second marker beside the first indented item. */
+.editor-nested-li {
+  list-style: none;
+}
 .editor-li > .editor-ul,
 .editor-li > .editor-ol {
   margin-top: 3px;

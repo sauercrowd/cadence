@@ -130,6 +130,7 @@ const theme = {
     listitem: "editor-li",
     listitemChecked: "editor-checked",
     listitemUnchecked: "editor-unchecked",
+    nested: { listitem: "editor-nested-li" },
   },
   code: "editor-code",
   link: "editor-link",
